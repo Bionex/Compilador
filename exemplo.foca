@@ -1,4 +1,9 @@
 int main()
 {
-	a + a
+	int a;
+	a = a + 1;
+	float b;
+	b = 1.1 + 2.3;
+	char c;
+	c = 'd' + 'e';
 }

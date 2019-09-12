@@ -23,29 +23,35 @@ ID {LETRA}({LETRA}|{NUM})*
 "main"		{return TK_MAIN;}
 
 "int"		{return TK_TIPO_INT;}
+"float"		{return TK_TIPO_FLOAT;}
+"char"		{return TK_TIPO_CHAR;}
 
 [(){}[\];,]	{ return *yytext; }
 
-[+\-*/=]		{ return *yytext; }
+[+\-*/=]	{ return *yytext; }
 
-{NUM}		{ yylval.traducao = yytext; return TK_NUM; }
+{NUM}		{yylval.traducao = yytext; return TK_NUM; }
+{REAL}		{yylval.traducao = yytext; return TK_REAL;}
+{CHAR}		{yylval.traducao = yytext; return TK_CHAR;}
 {ID}		{
-				if ( (tabela.find(yytext) != tabela.end()) ) 
+				if ( tabela.find(yytext) != tabela.end() )
 				{
-					yylval.label = "TMP" + to_string(tabela[yytext]);
+					yylval.label = (tabela[yytext].localVar);
+					
 					
 				}
 				else{
 
 					inserirTabela(yytext);
-					yylval.label = gerarLabel();
+					yylval.label = tabela[yytext].localVar;
 				}
 
 
 				return TK_ID; 
 				
-			}
+	}
 
-.			{ *yytext; }
+.			{*yytext; }
+
 
 %%
