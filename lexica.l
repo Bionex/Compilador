@@ -16,7 +16,7 @@ ID {LETRA}({LETRA}|{NUM})*
 
 %%
 
-"\n"		{}
+"\n"		{lineCount += 1;}
 
 {DELIM} 	{}
 
@@ -29,6 +29,13 @@ ID {LETRA}({LETRA}|{NUM})*
 [(){}[\];,]	{ return *yytext; }
 
 [+\-*/=]	{ return *yytext; }
+
+[<>]		{return *yytext; }
+
+"!="		{return TK_NOT_EQ;}
+">="		{return TK_BIG_EQ;}
+"<="		{return TK_SMALL_EQ;}
+"=="		{return TK_EQ;}
 
 {NUM}		{yylval.traducao = yytext; return TK_NUM; }
 {REAL}		{yylval.traducao = yytext; return TK_REAL;}
