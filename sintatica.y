@@ -20,6 +20,11 @@ typedef struct caracteristicas{
 	string localVar, tipo;
 } caracteristicas;
 
+typedef struct coercao {
+	int op;
+	string tipo;
+} Coercao;
+
 typedef std::tuple<string, string, string> KeyTriple;
 
 int yylex(void);
@@ -30,6 +35,7 @@ string declararVars();
 void inserirTabela(string);
 void inserirTemporaria(string, string);
 string verificarCoercao(string , string  ,string );
+KeyTriple genKey(string , string, string);
 
 void inicializarTabelaCoercao();
 
@@ -99,12 +105,30 @@ COMANDO:	E ';' { $$.traducao = $1.traducao; }
 			| DECLARACAO ';'{$$.traducao = "";} 
 			;
 
-ATRIBUICAO:	TK_ID '=' E { $$.traducao = $3.traducao +  "\t" + $1.label + " = " + $3.label + ";\n";}
+ATRIBUICAO:	TK_ID '=' E 
+			{
+
+				string var = revertTable[$1.label];
+				$1.tipo = tabela[var].tipo;
+				if($1.tipo == $3.tipo){
+					$$.traducao = $3.traducao +  "\t" + $1.label + " = " + $3.label + ";\n";
+				}
+				else{
+					string aux = verificarCoercao($1.tipo, "=", $3.tipo);
+					if(aux != ""){
+						$$.traducao = $3.traducao +  "\t" + $1.label + " = " + "(" + aux + ")" + $3.label + ";\n";
+					}
+					else{
+						yyerror("a operacao = nao esta definida para " + $1.tipo + " e " + $3.tipo);
+					}
+
+				}
+			}
 			;
 
-DECLARACAO:	TK_TIPO_INT VAR
+DECLARACAO:	TK_TIPO_INT TK_ID
 			{
-				$$.traducao = $2.traducao;
+				$$.traducao = "";
 				string var = revertTable[$2.label];
 				if(tabela.find(var) != tabela.end()){
 					if(tabela[var].tipo == "Undefined"){
@@ -112,10 +136,25 @@ DECLARACAO:	TK_TIPO_INT VAR
 						temporarias[$2.label] = "int";
 					}
 				}
+				else{
+					yyerror("A variavel \"" + var  + "\" ja foi declada como "+ tabela[var].tipo + " anteriormente\n");
+				}
 			}
-			| TK_TIPO_FLOAT VAR
+			| TK_TIPO_INT TK_ID '=' E
 			{
-				$$.traducao = $2.traducao;
+				string var = revertTable[$2.label];
+				if(tabela.find(var) != tabela.end()){
+					if(tabela[var].tipo == "Undefined"){
+						tabela[var].tipo = "int";
+						temporarias[$2.label] = "int";
+					}
+				}
+
+			}
+
+			| TK_TIPO_FLOAT TK_ID
+			{
+				$$.traducao = "";
 				string var = revertTable[$2.label];
 				if(tabela.find(var) != tabela.end()){
 					if(tabela[var].tipo == "Undefined"){
@@ -123,13 +162,13 @@ DECLARACAO:	TK_TIPO_INT VAR
 						temporarias[$2.label] = "float";
 					}
 					else {
-						cout << "A variavel \""<< var << "\" ja foi declada como "<< tabela[var].tipo << " anteriormente\n";
+						yyerror("A variavel \"" + var  + "\" ja foi declada como "+ tabela[var].tipo + " anteriormente\n");
 					}
 				}
 			}
-			| TK_TIPO_CHAR VAR
+			| TK_TIPO_CHAR TK_ID
 			{
-				$$.traducao = $2.traducao;
+				$$.traducao = "";
 				string var = revertTable[$2.label];
 				if(tabela.find(var) != tabela.end()){
 					if(tabela[var].tipo == "Undefined"){
@@ -137,57 +176,171 @@ DECLARACAO:	TK_TIPO_INT VAR
 						temporarias[$2.label] = "char";
 					}
 					else {
-						cout << "A variavel \""<< var << "\" ja foi declada como "<< tabela[var].tipo << " anteriormente\n";
+						yyerror("A variavel \"" + var  + "\" ja foi declada como "+ tabela[var].tipo + " anteriormente\n");
 					}
 				}
 			}
 			;
 
-VAR:		TK_ID {$$.label = $1.label; $$.traducao = "";}
-			;
-
 E:			E '+' E
 			{
-				if(temporarias[$1.label] == temporarias[$3.label]){
-					$$.label = "" + gerarLabel();
-					inserirTemporaria($$.label, temporarias[$1.label]);
+				if($1.tipo == $3.tipo){
+
+					$$.label = gerarLabel();
+					inserirTemporaria($$.label , $1.tipo);
+
+					$$.tipo = $1.tipo;
 					$$.traducao = $1.traducao + $3.traducao + "\t" +  $$.label + " = "  + $1.label + " + " +  $3.label + ";\n";
 				}
 				else{
-					yyerror("variaveis de tipos diferentes");
+					string aux = verificarCoercao($1.tipo, "+", $3.tipo);
+					if(aux != ""){
+						
+						$$.label = gerarLabel();
+						inserirTemporaria($$.label , aux);
+
+
+						$$.tipo = aux;
+
+						string coercaoLabel = gerarLabel();
+						inserirTemporaria(coercaoLabel, aux);
+
+						string coercao = "\t"+ coercaoLabel + " = " "("+ aux +") ", resultado;
+						if($1.tipo != aux){
+							coercao += $1.label;
+							resultado = coercaoLabel + " + " +  $3.label;
+						}
+						else{
+							coercao += $3.label;
+							resultado = $1.label + " + " +  coercaoLabel;
+						}
+						coercao += ";\n";
+						$$.traducao = $1.traducao + $3.traducao + coercao +"\t" +  $$.label + " = "  + resultado + ";\n";
+					}
+					else{
+						yyerror("a operacao + nao esta definida para " + $1.tipo + " e " + $3.tipo);
+					}
 				}
 			}
 			| E '-' E
 			{
-				if(temporarias[$1.label] == temporarias[$3.label]){
-					$$.label = "" + gerarLabel();
-					inserirTemporaria($$.label, temporarias[$1.label]);
+				if($1.tipo == $3.tipo){
+
+					$$.label = gerarLabel();
+					inserirTemporaria($$.label , $1.tipo);
+					
+					$$.tipo = $1.tipo;
 					$$.traducao = $1.traducao + $3.traducao + "\t" +  $$.label + " = "  + $1.label + " - " +  $3.label + ";\n";
 				}
 				else{
-					yyerror("variaveis de tipos diferentes");
+					string aux = verificarCoercao($1.tipo, "-", $3.tipo);
+					if(aux != ""){
+						
+						$$.label = gerarLabel();
+						inserirTemporaria($$.label , aux);
+
+						$$.tipo = aux;
+
+						string coercaoLabel = gerarLabel();
+						inserirTemporaria(coercaoLabel, aux);
+
+						string coercao = "\t"+ coercaoLabel + " = " "("+ aux +") ", resultado;
+						if($1.tipo != aux){
+							coercao += $1.label;
+							resultado = coercaoLabel + " - " +  $3.label;
+						}
+						else{
+							coercao += $3.label;
+							resultado = $1.label + " - " +  coercaoLabel;
+						}
+						coercao += ";\n";
+						$$.traducao = $1.traducao + $3.traducao + coercao +"\t" +  $$.label + " = "  + resultado + ";\n";
+					}
+					else{
+						yyerror("a operacao - nao esta definida para " + $1.tipo + " e " + $3.tipo);
+					}
 				}
 			}
 			| E '*' E
 			{
-				if(temporarias[$1.label] == temporarias[$3.label]){
-					$$.label = "" + gerarLabel();
-					inserirTemporaria($$.label, temporarias[$1.label]);
-					$$.traducao = $1.traducao + $3.traducao + "\t" +  $$.label + " = "  + $1.label + " /*" +  $3.label + ";\n";
+				if($1.tipo == $3.tipo){
+
+					$$.label = gerarLabel();
+					inserirTemporaria($$.label , $1.tipo);
+
+					$$.tipo = $1.tipo;
+					$$.traducao = $1.traducao + $3.traducao + "\t" +  $$.label + " = "  + $1.label + " * " +  $3.label + ";\n";
 				}
 				else{
-					yyerror("variaveis de tipos diferentes");
+					string aux = verificarCoercao($1.tipo, "*", $3.tipo);
+					if(aux != ""){
+
+						$$.label = gerarLabel();
+						inserirTemporaria($$.label , aux);
+
+						string coercaoLabel = gerarLabel();
+						inserirTemporaria(coercaoLabel, aux);
+
+						string coercao = "\t"+ coercaoLabel + " = " "("+ aux +") " , resultado;
+						$$.tipo = aux;
+						if($1.tipo != aux){
+							coercao += $1.label;
+							resultado = coercaoLabel + " * " +  $3.label;
+						}
+						else{
+							coercao += $3.label;
+							resultado = $1.label + " * " +  coercaoLabel;
+						}
+						coercao += ";\n";
+						$$.traducao = $1.traducao + $3.traducao + coercao +"\t" +  $$.label + " = "  + resultado + ";\n";
+					}
+					else{
+						yyerror("a operacao * nao esta definida para " + $1.tipo + " e " + $3.tipo);
+					}
 				}
 			}
 			| E '/' E
 			{
-				if(temporarias[$1.label] == temporarias[$3.label]){
-					$$.label = "" + gerarLabel();
-					inserirTemporaria($$.label, temporarias[$1.label]);
+				if($1.tipo == $3.tipo){
+
+					$$.label = gerarLabel();
+					inserirTemporaria($$.label , $1.tipo);
+
+					$$.tipo = $1.tipo;
 					$$.traducao = $1.traducao + $3.traducao + "\t" +  $$.label + " = "  + $1.label + " / " +  $3.label + ";\n";
 				}
 				else{
-					yyerror("variaveis de tipos diferentes");
+					string aux = verificarCoercao($1.tipo, "/", $3.tipo);
+					if(aux != ""){
+
+						$$.label = gerarLabel();
+						inserirTemporaria($$.label , aux);
+
+						$$.tipo = aux;
+
+						string coercaoLabel = gerarLabel();
+						inserirTemporaria(coercaoLabel, aux);
+
+						string coercao = "\t"+ coercaoLabel + " = " "("+ aux +") " ,  resultado;
+
+						if($1.tipo != aux){
+							coercao += $1.label;
+							resultado = coercaoLabel + " / " +  $3.label;
+						}
+						else{
+							coercao += $3.label;
+							resultado = $1.label + " / " +  coercaoLabel;
+						}
+
+						coercao += ";\n";
+
+
+
+						$$.traducao = $1.traducao + $3.traducao +  coercao +"\t" +$$.label + " = "  + resultado + ";\n";
+					}
+					else{
+						yyerror("a operacao / nao esta definida para " + $1.tipo + " e " + $3.tipo);
+					}
 				}
 			}
 			| '(' E ')' 
@@ -292,22 +445,40 @@ bool varDeclarada(){
 string verificarCoercao(string opUm, string operador ,string opDois){
 
 	KeyTriple chave (opUm, operador, opDois);
-	if(tabelaCoercao.find(chave) != tabelaCoercao.end())
+	if(tabelaCoercao.find(chave) != tabelaCoercao.end()){
 		return tabelaCoercao[chave];
+	}
 
-	/*chave = {opDois, operador,opUm};
-	if(tabelaCoercao.find(chave) != tabelaCoercao.end())
-		return tabelaCoercao[chave];
-	*/
+
+	if( operador != "="){
+		get<0>(chave) = opDois;
+		get<2>(chave) = opUm;
+		if(tabelaCoercao.find(chave) != tabelaCoercao.end())
+			return tabelaCoercao[chave];
+	}
+
+	return "";
 }
 
 void inicializarTabelaCoercao(){
-	KeyTriple chave ("int", "+" , "int");
 
-	tabelaCoercao[chave] = "int";
+	tabelaCoercao[genKey("int", "+", "float")] = "float";
+	tabelaCoercao[genKey("int", "-", "float")] = "float";
+	tabelaCoercao[genKey("int", "*", "float")] = "float";
+	tabelaCoercao[genKey("int", "/", "float")] = "float";
 
-	get<2>(chave) = "float";
-	tabelaCoercao[chave] = "float";
+	tabelaCoercao[genKey("int", "=", "float")] = "int";
+	tabelaCoercao[genKey("float", "=", "int")] = "float";
 
 
+
+
+	//tabelaCoercao[] = "float";
+
+
+}
+
+KeyTriple genKey(string a , string b, string c){
+	KeyTriple chave (a , b, c);
+	return chave;
 }
