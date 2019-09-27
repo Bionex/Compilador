@@ -26,6 +26,7 @@ ID {LETRA}({LETRA}|{NUM})*
 "float"		{return TK_TIPO_FLOAT;}
 "char"		{return TK_TIPO_CHAR;}
 
+
 [(){}[\];,]	{ return *yytext; }
 
 [+\-*/=]	{ return *yytext; }
@@ -37,9 +38,18 @@ ID {LETRA}({LETRA}|{NUM})*
 "<="		{return TK_SMALL_EQ;}
 "=="		{return TK_EQ;}
 
+"and"		{return TK_AND;}
+"or"		{return TK_OR;}
+
+"True"		{yylval.traducao = "1"; return TK_LOGICO;}
+
+"False"		{yylval.traducao = "0"; return TK_LOGICO;}
+
 {NUM}		{yylval.traducao = yytext; return TK_NUM; }
 {REAL}		{yylval.traducao = yytext; return TK_REAL;}
 {CHAR}		{yylval.traducao = yytext; return TK_CHAR;}
+
+
 {ID}		{
 				if ( tabela.find(yytext) != tabela.end() )
 				{
