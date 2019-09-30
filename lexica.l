@@ -28,7 +28,7 @@ ID {LETRA}({LETRA}|{NUM})*
 "bool"		{return TK_TIPO_BOOL;}
 
 
-[(){}[\];,]	{ return *yytext; }
+[(){}[\];,\']	{ return *yytext; }
 
 [+\-*/=]	{ return *yytext; }
 

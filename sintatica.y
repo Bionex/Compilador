@@ -116,8 +116,22 @@ COMANDOS:	COMANDO COMANDOS {$$.traducao = $1.traducao + $2.traducao;}
 COMANDO:	E ';' { $$.traducao = $1.traducao; }
 			| ATRIBUICAO ';' { $$.traducao =$1.traducao;}
 			| DECLARACAO ';'{$$.traducao = "";}
-			| TK_PRINT '('E')' ';' {$$.traducao = $3.traducao + "\t" + "std::cout <<" + $3.label + "<<std::endl;\n";}
+			| TK_PRINT '('FN_ARGS')' ';' {$$.traducao = $3.traducao + "\t" + "std::cout <<" + $3.label + "<<std::endl;\n";}
 			;
+
+FN_ARGS:	E FN_ARGS_AUX 
+			{
+				$$.traducao = $1.traducao + $2.traducao; $$.label = $1.label + $2.label;
+			}
+			| /* empty */{$$.traducao = ""; $$.label = "";}
+			;
+
+FN_ARGS_AUX: ',' E  FN_ARGS_AUX
+			{
+				$$.traducao = $2.traducao + $3.traducao;
+				$$.label = "<<\" , \"<<" + $2.label + $3.label;
+			}
+			| /* empty */{$$.traducao = ""; $$.label = ""; }	
 
 
 ATRIBUICAO:	TK_ID '=' E 
