@@ -75,21 +75,25 @@ std::map<KeyTriple, string> tabelaCoercao;
 %token TK_NUM TK_REAL TK_CHAR
 %token TK_MAIN TK_ID
 %token TK_FIM TK_ERROR
-%token TK_TIPO_FLOAT TK_TIPO_INT TK_TIPO_CHAR
+%token TK_TIPO_FLOAT TK_TIPO_INT TK_TIPO_CHAR TK_TIPO_BOOL
 %token TK_EQ TK_NOT_EQ TK_BIG_EQ TK_SMALL_EQ
 %token TK_AND TK_OR
 %token TK_LOGICO
+%token TK_PRINT
 
 
 
 %start S
 
+%left TK_AND
+%left TK_OR
+%left '<' '>' TK_NOT_EQ TK_EQ TK_BIG_EQ TK_SMALL_EQ
 %left '+' '-'
 %left '*' '/'
 %left '(' ')'
-%left '<' '>' TK_NOT_EQ TK_EQ TK_BIG_EQ TK_SMALL_EQ
-%left TK_OR
-%left TK_AND
+
+
+
 
 %%
 //{          ---------------- REGRAS ---------------------
@@ -111,8 +115,10 @@ COMANDOS:	COMANDO COMANDOS {$$.traducao = $1.traducao + $2.traducao;}
 
 COMANDO:	E ';' { $$.traducao = $1.traducao; }
 			| ATRIBUICAO ';' { $$.traducao =$1.traducao;}
-			| DECLARACAO ';'{$$.traducao = "";} 
+			| DECLARACAO ';'{$$.traducao = "";}
+			| TK_PRINT '('E')' ';' {$$.traducao = $3.traducao + "\t" + "std::cout <<" + $3.label + "<<std::endl;\n";}
 			;
+
 
 ATRIBUICAO:	TK_ID '=' E 
 			{
@@ -159,6 +165,10 @@ DECLARACAO:	TK_TIPO_INT TK_ID
 			| TK_TIPO_CHAR TK_ID
 			{
 				$$ = declaracaoVariavel($2, "char");
+			}
+			| TK_TIPO_BOOL TK_ID
+			{
+				$$ = declaracaoVariavel($2, "bool");
 			}
 			;
 

@@ -25,6 +25,7 @@ ID {LETRA}({LETRA}|{NUM})*
 "int"		{return TK_TIPO_INT;}
 "float"		{return TK_TIPO_FLOAT;}
 "char"		{return TK_TIPO_CHAR;}
+"bool"		{return TK_TIPO_BOOL;}
 
 
 [(){}[\];,]	{ return *yytext; }
@@ -44,6 +45,8 @@ ID {LETRA}({LETRA}|{NUM})*
 "True"		{yylval.traducao = "1"; return TK_LOGICO;}
 
 "False"		{yylval.traducao = "0"; return TK_LOGICO;}
+
+"print"		{return TK_PRINT;}
 
 {NUM}		{yylval.traducao = yytext; return TK_NUM; }
 {REAL}		{yylval.traducao = yytext; return TK_REAL;}
