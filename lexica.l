@@ -47,6 +47,8 @@ ID {LETRA}({LETRA}|{NUM})*
 "False"		{yylval.traducao = "0"; return TK_LOGICO;}
 
 "print"		{return TK_PRINT;}
+"if"		{return TK_IF;}
+"while"		{return TK_WHILE;}
 
 {NUM}		{yylval.traducao = yytext; return TK_NUM; }
 {REAL}		{yylval.traducao = yytext; return TK_REAL;}

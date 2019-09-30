@@ -41,6 +41,7 @@ KeyTriple genKey(string , string, string);
 struct atributos conversaoImplicita(struct atributos, struct atributos, string);
 struct atributos declaracaoVariavel(struct atributos, string);
 struct atributos operacaoRelacional(struct atributos, struct atributos, string);
+string gerarGotoLabel();
 
 void inicializarTabelaCoercao();
 
@@ -61,6 +62,7 @@ int getN();
 
 int nTemp = 0;
 int nUser = 0;
+int nGoto = 0;
 int lineCount = 1;
 
 
@@ -79,7 +81,7 @@ std::map<KeyTriple, string> tabelaCoercao;
 %token TK_EQ TK_NOT_EQ TK_BIG_EQ TK_SMALL_EQ
 %token TK_AND TK_OR
 %token TK_LOGICO
-%token TK_PRINT
+%token TK_PRINT TK_IF TK_WHILE
 
 
 
@@ -117,7 +119,35 @@ COMANDO:	E ';' { $$.traducao = $1.traducao; }
 			| ATRIBUICAO ';' { $$.traducao =$1.traducao;}
 			| DECLARACAO ';'{$$.traducao = "";}
 			| TK_PRINT '('FN_ARGS')' ';' {$$.traducao = $3.traducao + "\t" + "std::cout <<" + $3.label + "<<std::endl;\n";}
+			| IF {$$.traducao = $1.traducao;}
+			| WHILE { $$.traducao = $1.traducao;}
+			| ';'
 			;
+
+IF:			TK_IF '(' E ')' COMANDO
+			{
+				string endLabel = gerarGotoLabel();
+				$$.traducao = $3.traducao + "\t" + $3.label + " = !" + $3.label + ";\n" + "\tif( " + $3.label + " ) \n\t\t goto " + endLabel + ";\n" + $5.traducao + "\t" + endLabel + ":\n"; 
+			}
+			| TK_IF '(' E ')' BLOCO 
+			{
+				string endLabel = gerarGotoLabel();
+				$$.traducao = $3.traducao + "\t" + $3.label + " = !" + $3.label + ";\n" + "\tif( " + $3.label + " ) \n\t\t goto " + endLabel + ";\n" + $5.traducao + "\t" + endLabel + ":\n";
+			}
+			;
+
+WHILE:		TK_WHILE '(' E ')' COMANDO 
+			{
+				string startLabel = gerarGotoLabel();
+				string endLabel = gerarGotoLabel();
+				$$.traducao = "\t"+ startLabel + ":\n" +$3.traducao + "\t" + $3.label + " = !" + $3.label + ";\n" + "\tif( " + $3.label + " ) \n\t\t goto " + endLabel + ";\n" + $5.traducao + "\tgoto "+ startLabel + ";\n\t" + endLabel + ":\n"; 
+			}
+			| TK_WHILE '(' E ')' BLOCO
+			{
+				string startLabel = gerarGotoLabel();
+				string endLabel = gerarGotoLabel();
+				$$.traducao = "\t"+ startLabel + ":\n" +$3.traducao + "\t" + $3.label + " = !" + $3.label + ";\n" + "\tif( " + $3.label + " ) \n\t\t goto " + endLabel + ";\n" + $5.traducao + "\tgoto "+ startLabel + ";\n\t" + endLabel + ":\n"; 
+			}
 
 FN_ARGS:	E FN_ARGS_AUX 
 			{
@@ -309,6 +339,11 @@ void yyerror( string MSG )
 
 string gerarLabel(){
 	return string("TMP") + to_string(nTemp++);
+	
+}
+
+string gerarGotoLabel(){
+	return string("Label") + to_string(nGoto++);
 	
 }
 
