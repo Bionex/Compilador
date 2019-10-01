@@ -79,9 +79,9 @@ std::map<KeyTriple, string> tabelaCoercao;
 %token TK_FIM TK_ERROR
 %token TK_TIPO_FLOAT TK_TIPO_INT TK_TIPO_CHAR TK_TIPO_BOOL
 %token TK_EQ TK_NOT_EQ TK_BIG_EQ TK_SMALL_EQ
-%token TK_AND TK_OR
+%token TK_AND TK_OR TK_NOT
 %token TK_LOGICO
-%token TK_PRINT TK_IF TK_WHILE
+%token TK_PRINT TK_IF TK_WHILE TK_FOR
 
 
 
@@ -89,7 +89,9 @@ std::map<KeyTriple, string> tabelaCoercao;
 
 %left TK_AND
 %left TK_OR
+%left TK_NOT
 %left '<' '>' TK_NOT_EQ TK_EQ TK_BIG_EQ TK_SMALL_EQ
+%left '%'
 %left '+' '-'
 %left '*' '/'
 %left '(' ')'
@@ -233,6 +235,10 @@ E:			E '+' E
 			{
 				$$ = conversaoImplicita($1, $3 , "/");
 			}
+			| E '%' E
+			{
+				$$ = conversaoImplicita($1, $3 , "%");
+			}
 			| '(' E ')' 
 			{
 				$$.label = $2.label;
@@ -249,6 +255,12 @@ E:			E '+' E
 			| E TK_OR E {
 				$$ = conversaoImplicita($1, $3, "||");
 
+			}
+			| TK_NOT E{
+				$$.label = gerarLabel();
+				$$.tipo = "bool";
+				inserirTemporaria($$.label, $$.tipo);
+				$$.traducao = $2.traducao + "\t" + $$.label + " = !" + $2.label + ";\n";
 			}
 
 			//---------------------------- RELACIONAL ------------------------
@@ -274,6 +286,13 @@ E:			E '+' E
 				$$ = operacaoRelacional($1, $3, "!=");
 			}
 
+			//------------------ CONVERSAO EXPLICITA -------------------------
+			| '(' TIPO ')' E {
+				$$.label = gerarLabel();
+				$$.tipo = $2.traducao;
+				inserirTemporaria($$.label, $$.tipo);
+				$$.traducao = $4.traducao + "\t" + $$.label + " = (" + $2.traducao + ") " + $4.label + ";\n";
+			}
 
 			//}
 			// ----------------------- FINAIS ---------------------------------
@@ -313,6 +332,11 @@ E:			E '+' E
 
 			}
 			;
+
+TIPO:		TK_TIPO_BOOL	{$$.traducao = "bool";}
+			| TK_TIPO_INT	{$$.traducao = "int";}
+			| TK_TIPO_CHAR	{$$.traducao = "char";}
+			| TK_TIPO_FLOAT	{$$.traducao = "float";}
 //}
 %%
 
@@ -408,6 +432,7 @@ void inicializarTabelaCoercao(){
 	tabelaCoercao[genKey("int" , "-" , "int")] = "int";
 	tabelaCoercao[genKey("int" , "*" , "int")] = "int";
 	tabelaCoercao[genKey("int" , "/" , "int")] = "float";
+	tabelaCoercao[genKey("int" , "%", "int")] = "int";
 
 	tabelaCoercao[genKey("float", "+", "float")] = "float";
 	tabelaCoercao[genKey("float", "-", "float")] = "float";
@@ -508,7 +533,7 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 				coercao += $1.label;
 				resultado = coercaoLabel + " " + operador + " " + $3.label;
 			}
-			if($3.tipo != aux){
+			else if($3.tipo != aux){
 
 				coercao += $3.label;
 				resultado = $1.label + " " + operador + " " + coercaoLabel;

@@ -30,7 +30,7 @@ ID {LETRA}({LETRA}|{NUM})*
 
 [(){}[\];,\']	{ return *yytext; }
 
-[+\-*/=]	{ return *yytext; }
+[+\-*/=%]	{ return *yytext; }
 
 [<>]		{return *yytext; }
 
@@ -41,6 +41,7 @@ ID {LETRA}({LETRA}|{NUM})*
 
 "and"		{return TK_AND;}
 "or"		{return TK_OR;}
+"not"		{return TK_NOT;}
 
 "True"		{yylval.traducao = "1"; return TK_LOGICO;}
 
@@ -49,6 +50,7 @@ ID {LETRA}({LETRA}|{NUM})*
 "print"		{return TK_PRINT;}
 "if"		{return TK_IF;}
 "while"		{return TK_WHILE;}
+"for"		{return TK_FOR;}
 
 {NUM}		{yylval.traducao = yytext; return TK_NUM; }
 {REAL}		{yylval.traducao = yytext; return TK_REAL;}
