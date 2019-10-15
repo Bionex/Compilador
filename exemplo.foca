@@ -1,6 +1,13 @@
 int main()
 {
-	bool a;
-	a = not (float) 3 < 2 and 2 > 0;
-	print(a);
+	int a;
+	a = 10/2;
+
+	bool b;
+
+	b = a < 2.3;
+
+	print(a != 2.3);
+
+	print(b);
 }

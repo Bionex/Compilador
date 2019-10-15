@@ -18,14 +18,15 @@ struct atributos
 	string tipo;
 };
 
+struct coercao{
+	string retornoTipo, conversaoTipo;
+};
+
 typedef struct caracteristicas{
 	string localVar, tipo;
 } caracteristicas;
 
-typedef struct coercao {
-	int op;
-	string tipo;
-} Coercao;
+
 
 typedef std::tuple<string, string, string> KeyTriple;
 
@@ -36,7 +37,7 @@ string labelUsuario();
 string declararVars();
 void inserirTabela(string);
 void inserirTemporaria(string, string);
-string verificarCoercao(string , string  ,string );
+struct coercao verificarCoercao(string , string  ,string );
 KeyTriple genKey(string , string, string);
 struct atributos conversaoImplicita(struct atributos, struct atributos, string);
 struct atributos declaracaoVariavel(struct atributos, string);
@@ -71,7 +72,7 @@ std::unordered_map<std::string, caracteristicas> tabela;
 std::unordered_map<std::string, string> temporarias;
 std::unordered_map<std::string, std::string> revertTable;
 
-std::map<KeyTriple, string> tabelaCoercao;
+std::map<KeyTriple, struct coercao> tabelaCoercao;
 %}
 
 %token TK_NUM TK_REAL TK_CHAR
@@ -103,7 +104,7 @@ std::map<KeyTriple, string> tabelaCoercao;
 //{          ---------------- REGRAS ---------------------
 S:			TK_TIPO_INT TK_MAIN '(' ')' BLOCO
 			{
-				cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\n\nint main(void)\n{\n" << declararVars() << "\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
+				cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\n\n#define BOOL int\n\nint main(void)\n{\n" << declararVars() << "\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
 			}
 			;
 
@@ -175,9 +176,9 @@ ATRIBUICAO:	TK_ID '=' E
 					$$.traducao = $3.traducao +  "\t" + $1.label + " = " + $3.label + ";\n";
 				}
 				else{
-					string aux = verificarCoercao($1.tipo, "=", $3.tipo);
-					if(aux != ""){
-						$$.traducao = $3.traducao +  "\t" + $1.label + " = " + "(" + aux + ")" + $3.label + ";\n";
+					struct coercao correcao = verificarCoercao($1.tipo, "=", $3.tipo);
+					if(correcao.retornoTipo != "NULL"){
+						$$.traducao = $3.traducao +  "\t" + $1.label + " = " + "(" + correcao.conversaoTipo + ")" + $3.label + ";\n";
 					}
 					else{
 						yyerror("a operacao = nao esta definida para " + $1.tipo + " e " + $3.tipo);
@@ -265,25 +266,25 @@ E:			E '+' E
 
 			//---------------------------- RELACIONAL ------------------------
 			| E '<' E{
-				$$ = operacaoRelacional($1, $3, "<");
+				$$ = conversaoImplicita($1, $3, "<");
 			}
 
 			| E '>' E{
-				$$ = operacaoRelacional($1, $3, ">");
+				$$ = conversaoImplicita($1, $3, ">");
 			}
 			| E TK_BIG_EQ E{
-				$$ = operacaoRelacional($1, $3, ">=");
+				$$ = conversaoImplicita($1, $3, ">=");
 			}
 
 			| E TK_SMALL_EQ E{
-				$$ = operacaoRelacional($1, $3, "<=");
+				$$ = conversaoImplicita($1, $3, "<=");
 			}
 
 			| E TK_EQ E{
-				$$ = operacaoRelacional($1, $3, "==");
+				$$ = conversaoImplicita($1, $3, "==");
 			}
 			| E TK_NOT_EQ E{
-				$$ = operacaoRelacional($1, $3, "!=");
+				$$ = conversaoImplicita($1, $3, "!=");
 			}
 
 			//------------------ CONVERSAO EXPLICITA -------------------------
@@ -379,6 +380,8 @@ string labelUsuario(){
 string declararVars(){
 	string retorno = "";
 	for(auto &x: temporarias){
+		if(x.second == "bool")
+			x.second = "BOOL";
 		retorno = retorno + "\t" + x.second + " " +x.first + ";\n";
 	}
 	return retorno;
@@ -408,7 +411,7 @@ bool varDeclarada(){
 
 
 
-string verificarCoercao(string opUm, string operador ,string opDois){
+struct coercao verificarCoercao(string opUm, string operador ,string opDois){
 
 	KeyTriple chave (opUm, operador, opDois);
 	if(tabelaCoercao.find(chave) != tabelaCoercao.end()){
@@ -423,68 +426,69 @@ string verificarCoercao(string opUm, string operador ,string opDois){
 			return tabelaCoercao[chave];
 	}
 
-	return "";
+	struct coercao a = {"NULL","NULL"};
+	return a;
 }
 
 void inicializarTabelaCoercao(){
 
-	tabelaCoercao[genKey("int" , "+" , "int")] = "int";
-	tabelaCoercao[genKey("int" , "-" , "int")] = "int";
-	tabelaCoercao[genKey("int" , "*" , "int")] = "int";
-	tabelaCoercao[genKey("int" , "/" , "int")] = "float";
-	tabelaCoercao[genKey("int" , "%", "int")] = "int";
+	tabelaCoercao[genKey("int" , "+" , "int")] = {"int", "int"};
+	tabelaCoercao[genKey("int" , "-" , "int")] = {"int", "int"};
+	tabelaCoercao[genKey("int" , "*" , "int")] = {"int", "int"};
+	tabelaCoercao[genKey("int" , "/" , "int")] = {"int", "int"};
+	tabelaCoercao[genKey("int" , "%", "int")] = {"int", "int"};
 
-	tabelaCoercao[genKey("float", "+", "float")] = "float";
-	tabelaCoercao[genKey("float", "-", "float")] = "float";
-	tabelaCoercao[genKey("float", "*", "float")] = "float";
-	tabelaCoercao[genKey("float", "/", "float")] = "float";
+	tabelaCoercao[genKey("float", "+", "float")] = {"float", "float"};
+	tabelaCoercao[genKey("float", "-", "float")] = {"float", "float"};
+	tabelaCoercao[genKey("float", "*", "float")] = {"float", "float"};
+	tabelaCoercao[genKey("float", "/", "float")] = {"float", "float"};
 
-	tabelaCoercao[genKey("int", "+", "float")] = "float";
-	tabelaCoercao[genKey("int", "-", "float")] = "float";
-	tabelaCoercao[genKey("int", "*", "float")] = "float";
-	tabelaCoercao[genKey("int", "/", "float")] = "float";
+	tabelaCoercao[genKey("int", "+", "float")] = {"float", "float"};
+	tabelaCoercao[genKey("int", "-", "float")] = {"float", "float"};
+	tabelaCoercao[genKey("int", "*", "float")] = {"float", "float"};
+	tabelaCoercao[genKey("int", "/", "float")] = {"float", "float"};
 
 	
 	
 
 
 
-	tabelaCoercao[genKey("int", "=", "float")] = "int";
-	tabelaCoercao[genKey("float", "=", "int")] = "float";
+	tabelaCoercao[genKey("int", "=", "float")] = {"int","int"};
+	tabelaCoercao[genKey("float", "=", "int")] = {"float","float"};
 
 
-	tabelaCoercao[genKey("bool" , "&&", "bool")] = "bool";
-	tabelaCoercao[genKey("bool" , "||", "bool")] = "bool";
+	tabelaCoercao[genKey("bool" , "&&", "bool")] = {"bool","bool"};
+	tabelaCoercao[genKey("bool" , "||", "bool")] = {"bool","bool"};
 
 	//tabelaCoercao[genKey("bool" , "<", "bool")] = "bool";
-	tabelaCoercao[genKey("int" , "<", "int")] = "bool";
-	tabelaCoercao[genKey("float" , "<", "float")] = "bool";
-	tabelaCoercao[genKey("int" , "<", "float")] = "bool";
+	tabelaCoercao[genKey("int" , "<", "int")] = {"bool","int"};
+	tabelaCoercao[genKey("float" , "<", "float")] = {"bool","float"};
+	tabelaCoercao[genKey("int" , "<", "float")] = {"bool","float"};
 
-	tabelaCoercao[genKey("int" , ">", "int")] = "bool";
-	tabelaCoercao[genKey("float" , ">", "float")] = "bool";
-	tabelaCoercao[genKey("int" , ">", "float")] = "bool";
+	tabelaCoercao[genKey("int" , ">", "int")] = {"bool","int"};
+	tabelaCoercao[genKey("float" , ">", "float")] = {"bool","float"};
+	tabelaCoercao[genKey("int" , ">", "float")] = {"bool","float"};
 
-	tabelaCoercao[genKey("int" , ">=", "int")] = "bool";
-	tabelaCoercao[genKey("float" , ">=", "float")] = "bool";
-	tabelaCoercao[genKey("int" , ">=", "float")] = "bool";
+	tabelaCoercao[genKey("int" , ">=", "int")] = {"bool","int"};
+	tabelaCoercao[genKey("float" , ">=", "float")] = {"bool","float"};
+	tabelaCoercao[genKey("int" , ">=", "float")] = {"bool","float"};
 
-	tabelaCoercao[genKey("int" , "<=", "int")] = "bool";
-	tabelaCoercao[genKey("float" , "<=", "float")] = "bool";
-	tabelaCoercao[genKey("int" , "<=", "float")] = "bool";
+	tabelaCoercao[genKey("int" , "<=", "int")] = {"bool","int"};
+	tabelaCoercao[genKey("float" , "<=", "float")] = {"bool","float"};
+	tabelaCoercao[genKey("int" , "<=", "float")] = {"bool","float"};
 
 
-	tabelaCoercao[genKey("int" , "==", "int")] = "bool";
-	tabelaCoercao[genKey("float" , "==", "float")] = "bool";
-	tabelaCoercao[genKey("int" , "==", "float")] = "bool";
-	tabelaCoercao[genKey("char" , "==", "char")] = "bool";
-	tabelaCoercao[genKey("bool" , "==", "bool")] = "bool";
+	tabelaCoercao[genKey("int" , "==", "int")] = {"bool","int"};
+	tabelaCoercao[genKey("float" , "==", "float")] = {"bool","float"};
+	tabelaCoercao[genKey("int" , "==", "float")] = {"bool","float"};
+	tabelaCoercao[genKey("char" , "==", "char")] = {"bool","char"};
+	tabelaCoercao[genKey("bool" , "==", "bool")] = {"bool","bool"};
 
-	tabelaCoercao[genKey("int" , "!=", "int")] = "bool";
-	tabelaCoercao[genKey("float" , "!=", "float")] = "bool";
-	tabelaCoercao[genKey("int" , "!=", "float")] = "bool";
-	tabelaCoercao[genKey("char" , "!=", "char")] = "bool";
-	tabelaCoercao[genKey("bool" , "!=", "bool")] = "bool";
+	tabelaCoercao[genKey("int" , "!=", "int")] = {"bool","int"};
+	tabelaCoercao[genKey("float" , "!=", "float")] = {"bool","float"};
+	tabelaCoercao[genKey("int" , "!=", "float")] = {"bool","float"};
+	tabelaCoercao[genKey("char" , "!=", "char")] = {"bool","char"};
+	tabelaCoercao[genKey("bool" , "!=", "bool")] = {"bool","bool"};
 
 
 
@@ -508,32 +512,31 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 		$3.tipo = tabela[revertTable[$3.label]].tipo;
 
 
-	
-	string aux = verificarCoercao($1.tipo, operador, $3.tipo);
+	struct coercao coercaoToken = verificarCoercao($1.tipo, operador, $3.tipo);
 
-	if(aux != ""){
+	if(coercaoToken.retornoTipo != "NULL"){
 
 		$$.label = gerarLabel();
-		inserirTemporaria($$.label , aux);
+		inserirTemporaria($$.label , coercaoToken.retornoTipo);
 
 
-		$$.tipo = aux;
-		if($1.tipo == aux && $3.tipo == aux)
+		$$.tipo = coercaoToken.retornoTipo;
+		if($1.tipo == coercaoToken.conversaoTipo && $3.tipo == coercaoToken.conversaoTipo)
 			$$.traducao = $1.traducao + $3.traducao  + "\t" + $$.label +" = " + $1.label + " " + operador + " " + $3.label +";\n";
 
 		else{
 
 			string coercaoLabel = gerarLabel();
-			inserirTemporaria(coercaoLabel, aux);
+			inserirTemporaria(coercaoLabel, coercaoToken.conversaoTipo);
 
-			string coercao = "\t"+ coercaoLabel + " = " "("+ aux +") ",resultado;
+			string coercao = "\t"+ coercaoLabel + " = " "("+ coercaoToken.conversaoTipo +") ",resultado;
 
-			if($1.tipo != aux){
+			if($1.tipo != coercaoToken.conversaoTipo){
 
 				coercao += $1.label;
 				resultado = coercaoLabel + " " + operador + " " + $3.label;
 			}
-			else if($3.tipo != aux){
+			else if($3.tipo != coercaoToken.conversaoTipo){
 
 				coercao += $3.label;
 				resultado = $1.label + " " + operador + " " + coercaoLabel;
@@ -567,7 +570,32 @@ struct atributos declaracaoVariavel(struct atributos $2, string tipo){
 	return $$;
 }
 
-struct atributos operacaoRelacional(struct atributos $1, struct atributos $3, string operador){
+struct atributos operacaoRelacional(struct atributos $1, struct atributos $3, string operador){	
+	if(revertTable.find($1.label) != revertTable.end() )
+		$1.tipo = tabela[revertTable[$1.label]].tipo;
+
+	if(revertTable.find($3.label) != revertTable.end() )
+		$3.tipo = tabela[revertTable[$3.label]].tipo;
+
+	struct coercao aux = verificarCoercao($1.tipo , operador, $3.tipo);
+	struct atributos $$;
+
+
+	$$.label = gerarLabel();
+	$$.tipo = "bool";
+	inserirTemporaria($$.label , $$.tipo);
+	if(aux.retornoTipo != "NULL"){
+		$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + operador + " " + $3.label + ";\n";
+	}
+	else{
+		yyerror("A operacao " + operador + " não esta definida para os tipos " + $1.tipo + " e " + $3.tipo);
+	}
+
+	return $$;
+}
+
+/*
+struct atributos gerarCodigoRelacional(struct atributos $1, struct atributos $3, string operador){
 	
 	if(revertTable.find($1.label) != revertTable.end() )
 		$1.tipo = tabela[revertTable[$1.label]].tipo;
@@ -590,4 +618,4 @@ struct atributos operacaoRelacional(struct atributos $1, struct atributos $3, st
 	}
 
 	return $$;
-}
+}*/
