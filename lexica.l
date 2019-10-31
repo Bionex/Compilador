@@ -49,8 +49,12 @@ ID {LETRA}({LETRA}|{NUM})*
 
 "print"		{return TK_PRINT;}
 "if"		{return TK_IF;}
+"else"		{return TK_ELSE;}
 "while"		{return TK_WHILE;}
 "for"		{return TK_FOR;}
+"switch"	{return TK_SWITCH;}
+"case"		{return TK_CASE;}
+"taylor"	{return TK_DEFAULT;}
 
 {NUM}		{yylval.traducao = yytext; return TK_NUM; }
 {REAL}		{yylval.traducao = yytext; return TK_REAL;}

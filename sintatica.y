@@ -5,6 +5,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <map>
+#include <vector>
 
 #define YYSTYPE atributos
 #define oi(N) cout << "oi "<< N << endl
@@ -44,6 +45,8 @@ struct atributos declaracaoVariavel(struct atributos, string);
 struct atributos operacaoRelacional(struct atributos, struct atributos, string);
 string gerarGotoLabel();
 
+vector<string> split(const string&, const string&);
+
 void inicializarTabelaCoercao();
 
 bool operator<(KeyTriple const & lhs, KeyTriple const & rhs) {
@@ -82,12 +85,13 @@ std::map<KeyTriple, struct coercao> tabelaCoercao;
 %token TK_EQ TK_NOT_EQ TK_BIG_EQ TK_SMALL_EQ
 %token TK_AND TK_OR TK_NOT
 %token TK_LOGICO
-%token TK_PRINT TK_IF TK_WHILE TK_FOR
+%token TK_PRINT TK_IF TK_WHILE TK_FOR TK_ELSE TK_SWITCH TK_CASE TK_DEFAULT
 
 
 
 %start S
 
+%left TK_IF
 %left TK_AND
 %left TK_OR
 %left TK_NOT
@@ -124,20 +128,53 @@ COMANDO:	E ';' { $$.traducao = $1.traducao; }
 			| TK_PRINT '('FN_ARGS')' ';' {$$.traducao = $3.traducao + "\t" + "std::cout <<" + $3.label + "<<std::endl;\n";}
 			| IF {$$.traducao = $1.traducao;}
 			| WHILE { $$.traducao = $1.traducao;}
+			| SWITCH { $$.traducao = $1.traducao;}
 			| ';'
 			;
 
-IF:			TK_IF '(' E ')' COMANDO
-			{
-				string endLabel = gerarGotoLabel();
-				$$.traducao = $3.traducao + "\t" + $3.label + " = !" + $3.label + ";\n" + "\tif( " + $3.label + " ) \n\t\t goto " + endLabel + ";\n" + $5.traducao + "\t" + endLabel + ":\n"; 
-			}
-			| TK_IF '(' E ')' BLOCO 
-			{
-				string endLabel = gerarGotoLabel();
-				$$.traducao = $3.traducao + "\t" + $3.label + " = !" + $3.label + ";\n" + "\tif( " + $3.label + " ) \n\t\t goto " + endLabel + ";\n" + $5.traducao + "\t" + endLabel + ":\n";
-			}
+SWITCH:		TK_SWITCH '(' TK_ID ')' '{' caseRecursao TK_DEFAULT':' '}'{}
 			;
+			
+
+
+
+caseRecursao: /*vazio */{}
+			| TK_CASE':' E BLOMANDO caseRecursao 
+			{
+				$$.traducao = $3.traducao;
+				$$.label = gerarGotoLabel();
+
+				string temp = gerarLabel();
+				inserirTemporaria(temp, "int");
+
+				$$.traducao += "\t" + temp + " = ";
+
+				$$.traducao += "\t" + $3.label + " = !" + $3.label + ";\n";
+				$$.traducao +=  "\tif( "+ $3.label + " ) goto " + $5.label";\n";
+
+				$$.traducao += $5.traducao + "\tgoto !$spec$!;\n\t" + $5.label + ":\n";
+			}
+
+
+caseRecursaoAux:
+
+IF:			TK_IF '(' E ')' BLOMANDO
+			{
+				string endLabel = gerarGotoLabel();
+				$$.traducao = $3.traducao + "\t" + $3.label + " = !" + $3.label + ";\n" + "\tif( " + $3.label + " ) goto " + endLabel + ";\n" + $5.traducao + "\t" + endLabel + ":\n"; 
+			}
+			| TK_IF '(' E ')' BLOMANDO TK_ELSE BLOMANDO
+			{
+				string midLabel = gerarGotoLabel();
+				string endLabel = gerarGotoLabel();
+				$$.traducao = $3.traducao + "\t" + $3.label + " = !" + $3.label + ";\n" + "\tif( " + $3.label + " ) goto " + midLabel + ";\n" + $5.traducao + "\tgoto " + endLabel+ ";\n\t"+ midLabel + ":\n" + $7.traducao + "\t" +endLabel + ":\n"; 
+			}
+
+
+/* ----------------JUNCAO DE BLOCO COM COMANDO ------------------------*/
+BLOMANDO: BLOCO 
+		| COMANDO
+		;
 
 WHILE:		TK_WHILE '(' E ')' COMANDO 
 			{
@@ -619,3 +656,20 @@ struct atributos gerarCodigoRelacional(struct atributos $1, struct atributos $3,
 
 	return $$;
 }*/
+
+
+vector<string> split(const string& str, const string& delim)
+{
+    vector<string> tokens;
+    size_t prev = 0, pos = 0;
+    do
+    {
+        pos = str.find(delim, prev);
+        if (pos == string::npos) pos = str.length();
+        string token = str.substr(prev, pos-prev);
+        if (!token.empty()) tokens.push_back(token);
+        prev = pos + delim.length();
+    }
+    while (pos < str.length() && prev < str.length());
+    return tokens;
+} 
