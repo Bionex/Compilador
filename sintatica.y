@@ -34,6 +34,8 @@ typedef struct caracteristicas{
 	string localVar, tipo;
 } caracteristicas;
 
+typedef caracteristicas* caracteristicasPtr;
+
 
 
 typedef std::tuple<string, string, string> KeyTriple;
@@ -54,6 +56,8 @@ string gerarGotoLabel();
 int getN();
 vector<string> split(const string&, const string&);
 void inicializarTabelaCoercao();
+caracteristicasPtr buscarVariavel(string);
+caracteristicasPtr buscarVariavelTopo(string);
 bool operator<(KeyTriple const & lhs, KeyTriple const & rhs) {
 	/*
     if (lhs.a < rhs.a) return true;
@@ -78,8 +82,9 @@ int lineCount = 1;
 
 stack <SwitchLabels> gambiarraSwitch ;
 
+vector <unordered_map<string, caracteristicas>> pilhaContexto;
 
-std::unordered_map<std::string, caracteristicas> tabela;
+unordered_map<string, caracteristicas> tabela;
 std::unordered_map<std::string, string> temporarias;
 std::unordered_map<std::string, std::string> revertTable;
 
@@ -98,6 +103,7 @@ std::map<KeyTriple, struct coercao> tabelaCoercao;
 %token TK_AND TK_OR TK_NOT
 %token TK_LOGICO
 %token TK_PRINT TK_IF TK_WHILE TK_FOR TK_ELSE TK_SWITCH TK_CASE TK_DEFAULT
+%token TK_BREAK TK_CONTINUE
 
 
 
@@ -124,9 +130,17 @@ S:			TK_TIPO_INT TK_MAIN '(' ')' BLOCO
 			}
 			;
 
-BLOCO:		'{' COMANDOS '}'
+BLOCO:		BLOCO_AUX '{' COMANDOS '}'
 			{
-				$$.traducao = $2.traducao;
+				$$.traducao = $3.traducao;
+				pilhaContexto.pop_back();
+			}
+			;
+
+BLOCO_AUX:	/* vazio */ {
+				unordered_map<string, caracteristicas> table;
+				pilhaContexto.push_back(table);
+				
 			}
 			;
 
@@ -150,7 +164,6 @@ SWITCH:		TK_SWITCH '(' SWITCH_AUX ')' '{' caseRecursao TK_DEFAULT':' BLOMANDO '}
 					nGoto -= 1;
 					gambiarraSwitch.pop();
 			}
-
 			;
 			
 
@@ -456,7 +469,7 @@ string declararVars(){
 
 void inserirTabela(string a){
 	string aux = labelUsuario();
-	tabela[a] ={
+	pilhaContexto.back()[a] ={
 		aux,
 		"Undefined"
 	};
@@ -572,11 +585,17 @@ KeyTriple genKey(string a , string b, string c){
 struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , string operador){
 	struct atributos $$;
 
-	if(revertTable.find($1.label) != revertTable.end() )
-		$1.tipo = tabela[revertTable[$1.label]].tipo;
+	if(revertTable.find($1.label) != revertTable.end() ){
+		caracteristicasPtr atr1 = buscarVariavel(revertTable[$1.label]);
+		if(atr1)
+			$1.tipo = atr1->tipo;
+	}
 
-	if(revertTable.find($3.label) != revertTable.end() )
-		$3.tipo = tabela[revertTable[$3.label]].tipo;
+	if(revertTable.find($3.label) != revertTable.end() ){
+		caracteristicasPtr atr3 = buscarVariavel(revertTable[$3.label]);
+		if(atr3)
+			$3.tipo = atr3->tipo;
+	}
 
 
 	struct coercao coercaoToken = verificarCoercao($1.tipo, operador, $3.tipo);
@@ -623,10 +642,12 @@ struct atributos declaracaoVariavel(struct atributos $2, string tipo){
 	struct atributos $$;
 	$$.traducao = "";
 	string var = revertTable[$2.label];
-	if(tabela.find(var) != tabela.end()){
-		if(tabela[var].tipo == "Undefined"){
+
+	caracteristicasPtr varCaracteristicas = buscarVariavelTopo(var);
+	if(varCaracteristicas != NULL){
+		if(varCaracteristicas->tipo == "Undefined"){
 			//cout << "declarando "<< var << " como " << tipo << endl;
-			tabela[var].tipo = tipo;
+			varCaracteristicas->tipo = tipo;
 			temporarias[$2.label] = tipo;
 		}
 	}
@@ -638,12 +659,17 @@ struct atributos declaracaoVariavel(struct atributos $2, string tipo){
 }
 
 struct atributos operacaoRelacional(struct atributos $1, struct atributos $3, string operador){	
-	if(revertTable.find($1.label) != revertTable.end() )
-		$1.tipo = tabela[revertTable[$1.label]].tipo;
+	if(revertTable.find($1.label) != revertTable.end() ){
+		caracteristicasPtr atr1 = buscarVariavel(revertTable[$1.label]);
+		if(atr1)
+			$1.tipo = atr1->tipo;
+	}
 
-	if(revertTable.find($3.label) != revertTable.end() )
-		$3.tipo = tabela[revertTable[$3.label]].tipo;
-
+	if(revertTable.find($3.label) != revertTable.end() ){
+		caracteristicasPtr atr3 = buscarVariavel(revertTable[$3.label]);
+		if(atr3)
+			$3.tipo = atr3->tipo;
+	}
 	struct coercao aux = verificarCoercao($1.tipo , operador, $3.tipo);
 	struct atributos $$;
 
@@ -702,4 +728,25 @@ vector<string> split(const string& str, const string& delim)
     }
     while (pos < str.length() && prev < str.length());
     return tokens;
-} 
+}
+
+caracteristicasPtr buscarVariavel(string var){
+	int size = pilhaContexto.size();
+	while(size > 0){
+		unordered_map<string,caracteristicas> posAtual = pilhaContexto[size - 1];
+		if(posAtual.find(var) != posAtual.end()){
+			return &(posAtual[var]);
+		}
+		size -= 1;
+	}
+	return NULL;
+
+}
+
+caracteristicasPtr buscarVariavelTopo(string var){
+	unordered_map<string,caracteristicas> topo = pilhaContexto.back();
+	if(topo.find(var) != topo.end()){
+		return &(topo[var]);
+	}
+	return NULL;
+}

@@ -1,14 +1,8 @@
 int main()
 {
 	int a;
-	a = 1;
-	if(0){
-		if(a == 2)
-			print('a');
-		else
-			print('c');
-	}
-	else if(a == 1)
-		print('b');
+	int b;
+
+	a + 1;
 
 }

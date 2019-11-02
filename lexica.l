@@ -55,6 +55,8 @@ ID {LETRA}({LETRA}|{NUM})*
 "switch"	{return TK_SWITCH;}
 "case"		{return TK_CASE;}
 "taylor"	{return TK_DEFAULT;}
+"break"		{return TK_BREAK;}
+"continue"	{return TK_CONTINUE;}
 
 
 {NUM}		{yylval.traducao = yytext; return TK_NUM; }
@@ -63,21 +65,18 @@ ID {LETRA}({LETRA}|{NUM})*
 
 
 {ID}		{
-				if ( tabela.find(yytext) != tabela.end() )
-				{
-					yylval.label = (tabela[yytext].localVar);
-					
-					
-				}
-				else{
-
-					inserirTabela(yytext);
-					yylval.label = tabela[yytext].localVar;
-				}
+					caracteristicasPtr var = buscarVariavel(yytext);
+					if(var != NULL){
+						yylval.label = var->localVar;
+					}
+					else{
+						inserirTabela(yytext);
+						yylval.label = buscarVariavel(yytext)->localVar;
+					}
 
 
 				return TK_ID; 
-				
+	
 	}
 
 .			{*yytext; }
