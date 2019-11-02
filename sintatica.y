@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <map>
 #include <vector>
+#include <stack>
 
 #define YYSTYPE atributos
 #define oi(N) cout << "oi "<< N << endl
@@ -18,6 +19,12 @@ struct atributos
 	string traducao;
 	string tipo;
 };
+
+typedef struct SwitchLabelStacks{
+	string endLabel;
+	string nextLabel;
+	string varLabel;
+} SwitchLabels;
 
 struct coercao{
 	string retornoTipo, conversaoTipo;
@@ -44,11 +51,9 @@ struct atributos conversaoImplicita(struct atributos, struct atributos, string);
 struct atributos declaracaoVariavel(struct atributos, string);
 struct atributos operacaoRelacional(struct atributos, struct atributos, string);
 string gerarGotoLabel();
-
+int getN();
 vector<string> split(const string&, const string&);
-
 void inicializarTabelaCoercao();
-
 bool operator<(KeyTriple const & lhs, KeyTriple const & rhs) {
 	/*
     if (lhs.a < rhs.a) return true;
@@ -62,13 +67,16 @@ bool operator<(KeyTriple const & lhs, KeyTriple const & rhs) {
     return std::tie(get<0>(lhs), get<1>(lhs), get<2>(lhs) ) < std::tie(get<0>(rhs), get<1>(rhs), get<2>(rhs));
 }
 
-int getN();
+
+
+// -------------------------variaveis ------------------------------------------------
 
 int nTemp = 0;
 int nUser = 0;
 int nGoto = 0;
 int lineCount = 1;
 
+stack <SwitchLabels> gambiarraSwitch ;
 
 
 std::unordered_map<std::string, caracteristicas> tabela;
@@ -76,6 +84,10 @@ std::unordered_map<std::string, string> temporarias;
 std::unordered_map<std::string, std::string> revertTable;
 
 std::map<KeyTriple, struct coercao> tabelaCoercao;
+
+// --------------------------------------------LEFTS E TOKENS -------------------------------
+
+
 %}
 
 %token TK_NUM TK_REAL TK_CHAR
@@ -132,31 +144,48 @@ COMANDO:	E ';' { $$.traducao = $1.traducao; }
 			| ';'
 			;
 
-SWITCH:		TK_SWITCH '(' TK_ID ')' '{' caseRecursao TK_DEFAULT':' '}'{}
+SWITCH:		TK_SWITCH '(' SWITCH_AUX ')' '{' caseRecursao TK_DEFAULT':' BLOMANDO '}'
+			{
+					$$.traducao = $6.traducao + $9.traducao + "\t" + gambiarraSwitch.top().endLabel+ ":\n";
+					nGoto -= 1;
+					gambiarraSwitch.pop();
+			}
+
 			;
 			
 
-
-
-caseRecursao: /*vazio */{}
-			| TK_CASE':' E BLOMANDO caseRecursao 
+SWITCH_AUX: TK_ID
 			{
-				$$.traducao = $3.traducao;
-				$$.label = gerarGotoLabel();
+				SwitchLabels a;
+				a.endLabel = gerarGotoLabel();
+				a.nextLabel = gerarGotoLabel();
+				a.varLabel = $1.label;
+				gambiarraSwitch.push(a);
+				
+			};
 
-				string temp = gerarLabel();
-				inserirTemporaria(temp, "int");
+caseRecursao: /*vazio */{ $$.traducao = "";}
+			| TK_CASE E ':' BLOMANDO caseRecursao 
+			{
+				SwitchLabels topoDaPilha = gambiarraSwitch.top();
+				$$.traducao = "";
+				//cout << "a traducao disso é " + $$.traducao + "fiim" << endl;
+				struct atributos auxiliar;
+				auxiliar.tipo = tabela[revertTable[topoDaPilha.varLabel]].tipo;
+				auxiliar.label = topoDaPilha.varLabel;
 
-				$$.traducao += "\t" + temp + " = ";
+				struct atributos temporaria = conversaoImplicita($2, auxiliar, "==");
+				$$.traducao += temporaria.traducao;
+				$$.traducao += "\t" + temporaria.label + " = !" + temporaria.label + ";\n";
+				$$.traducao +=  "\tif( "+ temporaria.label + " ) goto " + topoDaPilha.nextLabel + ";\n";
+				$$.traducao += $4.traducao;
 
-				$$.traducao += "\t" + $3.label + " = !" + $3.label + ";\n";
-				$$.traducao +=  "\tif( "+ $3.label + " ) goto " + $5.label";\n";
-
-				$$.traducao += $5.traducao + "\tgoto !$spec$!;\n\t" + $5.label + ":\n";
+				$$.traducao += "\tgoto " + topoDaPilha.endLabel+ ";\n\t" + topoDaPilha.nextLabel + ":\n" +$5.traducao ;
+				gambiarraSwitch.top().nextLabel = gerarGotoLabel();
 			}
+			;
 
 
-caseRecursaoAux:
 
 IF:			TK_IF '(' E ')' BLOMANDO
 			{
@@ -169,7 +198,7 @@ IF:			TK_IF '(' E ')' BLOMANDO
 				string endLabel = gerarGotoLabel();
 				$$.traducao = $3.traducao + "\t" + $3.label + " = !" + $3.label + ";\n" + "\tif( " + $3.label + " ) goto " + midLabel + ";\n" + $5.traducao + "\tgoto " + endLabel+ ";\n\t"+ midLabel + ":\n" + $7.traducao + "\t" +endLabel + ":\n"; 
 			}
-
+			;
 
 /* ----------------JUNCAO DE BLOCO COM COMANDO ------------------------*/
 BLOMANDO: BLOCO 
@@ -187,7 +216,7 @@ WHILE:		TK_WHILE '(' E ')' COMANDO
 				string startLabel = gerarGotoLabel();
 				string endLabel = gerarGotoLabel();
 				$$.traducao = "\t"+ startLabel + ":\n" +$3.traducao + "\t" + $3.label + " = !" + $3.label + ";\n" + "\tif( " + $3.label + " ) \n\t\t goto " + endLabel + ";\n" + $5.traducao + "\tgoto "+ startLabel + ";\n\t" + endLabel + ":\n"; 
-			}
+			};
 
 FN_ARGS:	E FN_ARGS_AUX 
 			{
@@ -201,7 +230,8 @@ FN_ARGS_AUX: ',' E  FN_ARGS_AUX
 				$$.traducao = $2.traducao + $3.traducao;
 				$$.label = "<<\" , \"<<" + $2.label + $3.label;
 			}
-			| /* empty */{$$.traducao = ""; $$.label = ""; }	
+			| /* empty */{$$.traducao = ""; $$.label = ""; }
+			;
 
 
 ATRIBUICAO:	TK_ID '=' E 

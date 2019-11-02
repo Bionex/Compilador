@@ -28,7 +28,7 @@ ID {LETRA}({LETRA}|{NUM})*
 "bool"		{return TK_TIPO_BOOL;}
 
 
-[(){}[\];,\']	{ return *yytext; }
+[(){}[\];:,\']	{ return *yytext; }
 
 [+\-*/=%]	{ return *yytext; }
 
@@ -55,6 +55,7 @@ ID {LETRA}({LETRA}|{NUM})*
 "switch"	{return TK_SWITCH;}
 "case"		{return TK_CASE;}
 "taylor"	{return TK_DEFAULT;}
+
 
 {NUM}		{yylval.traducao = yytext; return TK_NUM; }
 {REAL}		{yylval.traducao = yytext; return TK_REAL;}
