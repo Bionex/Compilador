@@ -64,20 +64,7 @@ ID {LETRA}({LETRA}|{NUM})*
 {CHAR}		{yylval.traducao = yytext; return TK_CHAR;}
 
 
-{ID}		{
-					caracteristicasPtr var = buscarVariavel(yytext);
-					if(var != NULL){
-						yylval.label = var->localVar;
-					}
-					else{
-						inserirTabela(yytext);
-						yylval.label = buscarVariavel(yytext)->localVar;
-					}
-
-
-				return TK_ID; 
-	
-	}
+{ID}		{ yylval.label = yytext; return TK_ID;}
 
 .			{*yytext; }
 

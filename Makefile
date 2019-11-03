@@ -1,5 +1,5 @@
 all:
-		@clear
+		@reset
 		@lex lexica.l
 		@yacc -t -d sintatica.y
 		@g++ -o glf y.tab.c -ll -std=c++11 -DYYDEBUG
@@ -9,7 +9,7 @@ all:
 		@rm y.tab.c y.tab.h lex.yy.c glf
 
 testar:
-		@clear
+		@reset
 		@lex lexica.l
 		@yacc -t -d sintatica.y
 		@g++ -o glf y.tab.c -ll -std=c++11 -DYYDEBUG

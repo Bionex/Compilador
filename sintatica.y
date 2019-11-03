@@ -7,34 +7,29 @@
 #include <map>
 #include <vector>
 #include <stack>
+#include "escopo.h"
 
 #define YYSTYPE atributos
 #define oi(N) cout << "oi "<< N << endl
 
 using namespace std;
 
-struct atributos
+typedef struct atributos
 {
 	string label;
 	string traducao;
 	string tipo;
-};
+} atributos;
 
 typedef struct SwitchLabelStacks{
 	string endLabel;
 	string nextLabel;
-	string varLabel;
+	caracteristicas variavel;
 } SwitchLabels;
 
 struct coercao{
 	string retornoTipo, conversaoTipo;
 };
-
-typedef struct caracteristicas{
-	string localVar, tipo;
-} caracteristicas;
-
-typedef caracteristicas* caracteristicasPtr;
 
 
 
@@ -50,14 +45,15 @@ void inserirTemporaria(string, string);
 struct coercao verificarCoercao(string , string  ,string );
 KeyTriple genKey(string , string, string);
 struct atributos conversaoImplicita(struct atributos, struct atributos, string);
-struct atributos declaracaoVariavel(struct atributos, string);
+struct atributos declaracaoVariavel(string, string);
 struct atributos operacaoRelacional(struct atributos, struct atributos, string);
 string gerarGotoLabel();
 int getN();
 vector<string> split(const string&, const string&);
 void inicializarTabelaCoercao();
-caracteristicasPtr buscarVariavel(string);
-caracteristicasPtr buscarVariavelTopo(string);
+caracteristicas buscarVariavel(string);
+caracteristicas buscarVariavelTopo(string);
+atributos caracteristicasToAtributos(caracteristicas);
 bool operator<(KeyTriple const & lhs, KeyTriple const & rhs) {
 	/*
     if (lhs.a < rhs.a) return true;
@@ -82,11 +78,9 @@ int lineCount = 1;
 
 stack <SwitchLabels> gambiarraSwitch ;
 
-vector <unordered_map<string, caracteristicas>> pilhaContexto;
+pilhaMapaPtr pilhaContexto = createMapStack();
 
-unordered_map<string, caracteristicas> tabela;
 std::unordered_map<std::string, string> temporarias;
-std::unordered_map<std::string, std::string> revertTable;
 
 std::map<KeyTriple, struct coercao> tabelaCoercao;
 
@@ -133,13 +127,13 @@ S:			TK_TIPO_INT TK_MAIN '(' ')' BLOCO
 BLOCO:		BLOCO_AUX '{' COMANDOS '}'
 			{
 				$$.traducao = $3.traducao;
-				pilhaContexto.pop_back();
+				popEscopo(pilhaContexto);
 			}
 			;
 
 BLOCO_AUX:	/* vazio */ {
-				unordered_map<string, caracteristicas> table;
-				pilhaContexto.push_back(table);
+				tabelaVariavel table;
+				pushEscopo(pilhaContexto,table);
 				
 			}
 			;
@@ -172,7 +166,7 @@ SWITCH_AUX: TK_ID
 				SwitchLabels a;
 				a.endLabel = gerarGotoLabel();
 				a.nextLabel = gerarGotoLabel();
-				a.varLabel = $1.label;
+				a.variavel = buscarVariavel($1.label);
 				gambiarraSwitch.push(a);
 				
 			};
@@ -184,8 +178,8 @@ caseRecursao: /*vazio */{ $$.traducao = "";}
 				$$.traducao = "";
 				//cout << "a traducao disso é " + $$.traducao + "fiim" << endl;
 				struct atributos auxiliar;
-				auxiliar.tipo = tabela[revertTable[topoDaPilha.varLabel]].tipo;
-				auxiliar.label = topoDaPilha.varLabel;
+				auxiliar.tipo = topoDaPilha.variavel.tipo;
+				auxiliar.label = topoDaPilha.variavel.localVar;
 
 				struct atributos temporaria = conversaoImplicita($2, auxiliar, "==");
 				$$.traducao += temporaria.traducao;
@@ -250,18 +244,18 @@ FN_ARGS_AUX: ',' E  FN_ARGS_AUX
 ATRIBUICAO:	TK_ID '=' E 
 			{
 
-				string var = revertTable[$1.label];
-				$1.tipo = tabela[var].tipo;
-				if($1.tipo == $3.tipo){
+				caracteristicas variavel = buscarVariavel($1.label);
+				
+				if(variavel.tipo == $3.tipo){
 					$$.traducao = $3.traducao +  "\t" + $1.label + " = " + $3.label + ";\n";
 				}
 				else{
-					struct coercao correcao = verificarCoercao($1.tipo, "=", $3.tipo);
+					struct coercao correcao = verificarCoercao(variavel.tipo, "=", $3.tipo);
 					if(correcao.retornoTipo != "NULL"){
 						$$.traducao = $3.traducao +  "\t" + $1.label + " = " + "(" + correcao.conversaoTipo + ")" + $3.label + ";\n";
 					}
 					else{
-						yyerror("a operacao = nao esta definida para " + $1.tipo + " e " + $3.tipo);
+						yyerror("a operacao = nao esta definida para " + variavel.tipo + " e " + $3.tipo);
 					}
 
 				}
@@ -270,7 +264,8 @@ ATRIBUICAO:	TK_ID '=' E
 
 DECLARACAO:	TK_TIPO_INT TK_ID
 			{
-				$$ = declaracaoVariavel($2, "int");
+				struct atributos
+				$$ = declaracaoVariavel($2.label, "int");
 			}
 			| TK_TIPO_INT TK_ID '=' E
 			{
@@ -287,15 +282,15 @@ DECLARACAO:	TK_TIPO_INT TK_ID
 
 			| TK_TIPO_FLOAT TK_ID
 			{
-				$$ = declaracaoVariavel($2, "float");
+				$$ = declaracaoVariavel($2.label, "float");
 			}
 			| TK_TIPO_CHAR TK_ID
 			{
-				$$ = declaracaoVariavel($2, "char");
+				$$ = declaracaoVariavel($2.label, "char");
 			}
 			| TK_TIPO_BOOL TK_ID
 			{
-				$$ = declaracaoVariavel($2, "bool");
+				$$ = declaracaoVariavel($2.label, "bool");
 			}
 			;
 
@@ -400,9 +395,13 @@ E:			E '+' E
 				$$.tipo = "char";
 			}
 			| TK_ID{
-				$$.label = $1.label;
+				caracteristicas variavel = buscarVariavel($1.label);
+				if(variavel.localVar == ""){
+					yyerror("A variavel \"" + $1.label +"\" foi usada e não foi declarada ainda ");
+				}
+				$$.label = variavel.localVar;
 				$$.traducao = "";
-				$$.tipo = $1.tipo;
+				$$.tipo = variavel.tipo;
 				//cout << "$1.tipo = " << $1.tipo << endl;
 			}
 			| TK_LOGICO{
@@ -469,12 +468,11 @@ string declararVars(){
 
 void inserirTabela(string a){
 	string aux = labelUsuario();
-	pilhaContexto.back()[a] ={
+	pilhaContexto->escopos.back()[a] ={
 		aux,
 		"Undefined"
 	};
 	temporarias[aux] = "Undefined";
-	revertTable[aux] = a;
 }
 
 void inserirTemporaria(string label, string tipo){
@@ -585,19 +583,6 @@ KeyTriple genKey(string a , string b, string c){
 struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , string operador){
 	struct atributos $$;
 
-	if(revertTable.find($1.label) != revertTable.end() ){
-		caracteristicasPtr atr1 = buscarVariavel(revertTable[$1.label]);
-		if(atr1)
-			$1.tipo = atr1->tipo;
-	}
-
-	if(revertTable.find($3.label) != revertTable.end() ){
-		caracteristicasPtr atr3 = buscarVariavel(revertTable[$3.label]);
-		if(atr3)
-			$3.tipo = atr3->tipo;
-	}
-
-
 	struct coercao coercaoToken = verificarCoercao($1.tipo, operador, $3.tipo);
 
 	if(coercaoToken.retornoTipo != "NULL"){
@@ -638,37 +623,42 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 	return $$;
 }
 
-struct atributos declaracaoVariavel(struct atributos $2, string tipo){
+struct atributos declaracaoVariavel(string var, string tipo){
 	struct atributos $$;
 	$$.traducao = "";
-	string var = revertTable[$2.label];
 
-	caracteristicasPtr varCaracteristicas = buscarVariavelTopo(var);
-	if(varCaracteristicas != NULL){
-		if(varCaracteristicas->tipo == "Undefined"){
+	caracteristicas varCaracteristicas = buscarVariavelTopo(var);
+	
+	if(varCaracteristicas.localVar == ""){
+		//cout << "testando1" << endl;
+		if(varCaracteristicas.tipo == ""){
+			//cout << "testando" << endl;
 			//cout << "declarando "<< var << " como " << tipo << endl;
-			varCaracteristicas->tipo = tipo;
-			temporarias[$2.label] = tipo;
+			varCaracteristicas.tipo = tipo;
+			varCaracteristicas.localVar =labelUsuario();
+			varCaracteristicas.nomeVar = var;
+			addVar2Escopo(pilhaContexto,varCaracteristicas);
+			temporarias[varCaracteristicas.localVar] = tipo;
 		}
 	}
 	else{
-		yyerror("A variavel \"" + var  + "\" ja foi declada como "+ tabela[var].tipo + " anteriormente\n");
+		yyerror("A variavel \"" + var  + "\" ja foi declada como "+ varCaracteristicas.tipo + " anteriormente\n");
 	}
 
 	return $$;
 }
 
 struct atributos operacaoRelacional(struct atributos $1, struct atributos $3, string operador){	
-	if(revertTable.find($1.label) != revertTable.end() ){
-		caracteristicasPtr atr1 = buscarVariavel(revertTable[$1.label]);
-		if(atr1)
-			$1.tipo = atr1->tipo;
+	/*if(revertTable.find($1.label) != revertTable.end() ){
+		caracteristicas atr1 = buscarVariavel(revertTable[$1.label]);
+		if(atr1.localVar != "")
+			$1.tipo = atr1.tipo;
 	}
 
 	if(revertTable.find($3.label) != revertTable.end() ){
-		caracteristicasPtr atr3 = buscarVariavel(revertTable[$3.label]);
-		if(atr3)
-			$3.tipo = atr3->tipo;
+		caracteristicas atr3 = buscarVariavel(revertTable[$3.label]);
+		if(atr3.localVar != "")
+			$3.tipo = atr3.tipo;
 	}
 	struct coercao aux = verificarCoercao($1.tipo , operador, $3.tipo);
 	struct atributos $$;
@@ -684,7 +674,7 @@ struct atributos operacaoRelacional(struct atributos $1, struct atributos $3, st
 		yyerror("A operacao " + operador + " não esta definida para os tipos " + $1.tipo + " e " + $3.tipo);
 	}
 
-	return $$;
+	return $$;*/
 }
 
 /*
@@ -730,23 +720,29 @@ vector<string> split(const string& str, const string& delim)
     return tokens;
 }
 
-caracteristicasPtr buscarVariavel(string var){
-	int size = pilhaContexto.size();
-	while(size > 0){
-		unordered_map<string,caracteristicas> posAtual = pilhaContexto[size - 1];
+caracteristicas buscarVariavel(string var){
+	for(int i = pilhaContexto->escopoAtual;i >= 0 ;i--){
+		tabelaVariavel posAtual = pilhaContexto->escopos[i];
 		if(posAtual.find(var) != posAtual.end()){
-			return &(posAtual[var]);
+			return (posAtual[var]);
 		}
-		size -= 1;
 	}
-	return NULL;
+	return createVar("","", "");
 
 }
 
-caracteristicasPtr buscarVariavelTopo(string var){
-	unordered_map<string,caracteristicas> topo = pilhaContexto.back();
+caracteristicas buscarVariavelTopo(string var){
+	tabelaVariavel topo = pilhaContexto->escopos.back();
 	if(topo.find(var) != topo.end()){
-		return &(topo[var]);
+		return (topo[var]);
 	}
-	return NULL;
+	return createVar("","", "");
+}
+
+atributos caracteristicasToAtributos(caracteristicas c){
+	atributos atr;
+	atr.tipo = c.tipo;
+	atr.label = c.localVar;
+	atr.traducao = "";
+	return atr;
 }
