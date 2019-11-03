@@ -8,6 +8,7 @@
 #include <vector>
 #include <stack>
 #include "escopo.h"
+#include "loop.h"
 
 #define YYSTYPE atributos
 #define oi(N) cout << "oi "<< N << endl
@@ -80,6 +81,7 @@ int lineCount = 1;
 stack <SwitchLabels> gambiarraSwitch ;
 
 pilhaMapaPtr pilhaContexto = createMapStack();
+pilhaLoopPtr loops = createLoopStack();
 
 std::unordered_map<std::string, string> temporarias;
 
@@ -129,6 +131,7 @@ BLOCO:		BLOCO_AUX '{' COMANDOS '}'
 			{
 				$$.traducao = $3.traducao;
 				popEscopo(pilhaContexto);
+				//cout <<"teste3"<< endl;
 			}
 			;
 
@@ -151,6 +154,17 @@ COMANDO:	E ';' { $$.traducao = $1.traducao; }
 			| WHILE { $$.traducao = $1.traducao;}
 			| SWITCH { $$.traducao = $1.traducao;}
 			| DO ';'{$$.traducao = $1.traducao;}
+			| TK_BREAK ';'
+			{
+				if(!hasLoop(loops))
+					yyerror("Break fora de um loop");
+				$$.traducao = "\tgoto " + getLoop(loops).endLabel + ";\n";			
+			}
+			| TK_CONTINUE ';'{
+				if(!hasLoop(loops))
+					yyerror("Break fora de um loop");
+				$$.traducao = "\tgoto " + getLoop(loops).continueLabel + ";\n";
+			}
 			| ';'
 			;
 
@@ -159,6 +173,8 @@ DO:			TK_DO BLOCO TK_WHILE '(' E ')'
 				string startLabel = gerarGotoLabel();
 				string endLabel = gerarGotoLabel();
 				string continueLabel = gerarGotoLabel();
+
+				Loop loopinho = {startLabel, endLabel, continueLabel};
 
 				$$.traducao = "\t" + startLabel + ":\n" + $2.traducao;
 				$$.traducao += "\t" + continueLabel + ":\n";
@@ -172,7 +188,7 @@ DO:			TK_DO BLOCO TK_WHILE '(' E ')'
 
 SWITCH:		TK_SWITCH '(' SWITCH_AUX ')' '{' caseRecursao TK_DEFAULT':' BLOMANDO '}'
 			{
-					$$.traducao = $6.traducao + $9.traducao + "\t" + gambiarraSwitch.top().endLabel+ ":\n";
+					$$.traducao = $6.traducao + $9.traducao + "\t" + gambiarraSwitch.top().endLabel + ":\n";
 					nGoto -= 1;
 					gambiarraSwitch.pop();
 			}
@@ -248,18 +264,24 @@ BLOMANDO: BLOCO
 		| COMANDO
 		;
 
-WHILE:		TK_WHILE '(' E ')' COMANDO 
+
+WHILE:		WHILE_AUX TK_WHILE '(' E ')' BLOMANDO 
 			{
-				string startLabel = gerarGotoLabel();
-				string endLabel = gerarGotoLabel();
-				$$.traducao = "\t"+ startLabel + ":\n" +$3.traducao + "\t" + $3.label + " = !" + $3.label + ";\n" + "\tif( " + $3.label + " ) \n\t\t goto " + endLabel + ";\n" + $5.traducao + "\tgoto "+ startLabel + ";\n\t" + endLabel + ":\n"; 
+				Loop loopinho = getLoop(loops);
+				$$.traducao = "\t"+ loopinho.startLabel + ":\n" +$4.traducao + "\t" + $4.label + " = !" + $4.label + ";\n" + "\tif( " + $4.label + " ) goto " + loopinho.endLabel + ";\n" + $6.traducao + "\tgoto "+ loopinho.startLabel + ";\n\t" + loopinho.endLabel + ":\n";
+				popLoop(loops);
+				//cout<< "teste2" << endl; 
 			}
-			| TK_WHILE '(' E ')' BLOCO
+			;
+
+WHILE_AUX:	/*VAZIO */
 			{
 				string startLabel = gerarGotoLabel();
 				string endLabel = gerarGotoLabel();
-				$$.traducao = "\t"+ startLabel + ":\n" +$3.traducao + "\t" + $3.label + " = !" + $3.label + ";\n" + "\tif( " + $3.label + " ) \n\t\t goto " + endLabel + ";\n" + $5.traducao + "\tgoto "+ startLabel + ";\n\t" + endLabel + ":\n"; 
-			};
+				Loop loopinho = {startLabel, endLabel, startLabel};
+				pushLoop(loopinho, loops);
+			} 
+			;
 
 FN_ARGS:	E FN_ARGS_AUX 
 			{
@@ -297,6 +319,8 @@ ATRIBUICAO:	TK_ID '=' E
 				}
 			}
 			;
+
+
 
 DECLARACAO:	TIPO TK_ID
 			{
