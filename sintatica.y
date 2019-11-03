@@ -162,28 +162,35 @@ COMANDO:	E ';' { $$.traducao = $1.traducao; }
 			}
 			| TK_CONTINUE ';'{
 				if(!hasLoop(loops))
-					yyerror("Break fora de um loop");
+					yyerror("Continue fora de um loop");
 				$$.traducao = "\tgoto " + getLoop(loops).continueLabel + ";\n";
 			}
 			| ';'
 			;
 
-DO:			TK_DO BLOCO TK_WHILE '(' E ')'
+DO:			DO_AUX TK_DO BLOCO TK_WHILE '(' E ')'
+			{
+				Loop loopinho = getLoop(loops);
+
+				$$.traducao = "\t" + loopinho.startLabel + ":\n" + $3.traducao;
+				$$.traducao += "\t" + loopinho.continueLabel + ":\n";
+				$$.traducao += $6.traducao;
+				$$.traducao += "\t" + $6.label + " = !" + $6.label + ";\n";
+				$$.traducao += "\tif( " + $6.label + " ) goto " + loopinho.endLabel + ";\n";
+				$$.traducao += "\tgoto " + loopinho.startLabel + ";\n";
+				$$.traducao += "\t" + loopinho.endLabel + ":\n";
+
+				popLoop(loops);
+
+			}
+DO_AUX:		/*vazio */
 			{
 				string startLabel = gerarGotoLabel();
 				string endLabel = gerarGotoLabel();
 				string continueLabel = gerarGotoLabel();
 
 				Loop loopinho = {startLabel, endLabel, continueLabel};
-
-				$$.traducao = "\t" + startLabel + ":\n" + $2.traducao;
-				$$.traducao += "\t" + continueLabel + ":\n";
-				$$.traducao += $5.traducao;
-				$$.traducao += "\t" + $5.label + " = !" + $5.label + ";\n";
-				$$.traducao += "\tif( " + $5.label + " ) goto " + endLabel + ";\n";
-				$$.traducao += "\tgoto " + startLabel + ";\n";
-				$$.traducao += "\t" + endLabel + ":\n";
-
+				pushLoop(loopinho, loops);
 			}
 
 SWITCH:		TK_SWITCH '(' SWITCH_AUX ')' '{' caseRecursao TK_DEFAULT':' BLOMANDO '}'
