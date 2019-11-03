@@ -173,24 +173,42 @@ SWITCH_AUX: TK_ID
 			};
 
 caseRecursao: /*vazio */{ $$.traducao = "";}
-			| TK_CASE E ':' BLOMANDO caseRecursao 
+			| TK_CASE MULTI_E ':' BLOMANDO caseRecursao 
 			{
 				SwitchLabels topoDaPilha = gambiarraSwitch.top();
 				$$.traducao = "";
 				//cout << "a traducao disso é " + $$.traducao + "fiim" << endl;
-				struct atributos auxiliar;
-				auxiliar.tipo = topoDaPilha.variavel.tipo;
-				auxiliar.label = topoDaPilha.variavel.localVar;
-
-				struct atributos temporaria = conversaoImplicita($2, auxiliar, "==");
-				$$.traducao += temporaria.traducao;
-				$$.traducao += "\t" + temporaria.label + " = !" + temporaria.label + ";\n";
-				$$.traducao +=  "\tif( "+ temporaria.label + " ) goto " + topoDaPilha.nextLabel + ";\n";
+				$$.traducao += $2.traducao;
+				$$.traducao += "\t" + $2.label + " = !" + $2.label + ";\n";
+				$$.traducao +=  "\tif( "+ $2.label + " ) goto " + topoDaPilha.nextLabel + ";\n";
 				$$.traducao += $4.traducao;
 
 				$$.traducao += "\tgoto " + topoDaPilha.endLabel+ ";\n\t" + topoDaPilha.nextLabel + ":\n" +$5.traducao ;
 				gambiarraSwitch.top().nextLabel = gerarGotoLabel();
 			}
+			;
+
+MULTI_E: 	MULTI_E ',' E  
+			{
+				SwitchLabels topoDaPilha = gambiarraSwitch.top();
+				//cout<< "AAAAAAAAAAAAAAAAAA" << endl;
+				struct atributos auxiliar;
+				auxiliar.tipo = topoDaPilha.variavel.tipo;
+				auxiliar.label = topoDaPilha.variavel.localVar;
+
+				struct atributos temporaria = conversaoImplicita($3, auxiliar, "==");
+				$$ = conversaoImplicita($1, temporaria, "||");
+				
+			}
+			| E 
+			{
+				SwitchLabels topoDaPilha = gambiarraSwitch.top();
+				struct atributos auxiliar;
+				auxiliar.tipo = topoDaPilha.variavel.tipo;
+				auxiliar.label = topoDaPilha.variavel.localVar;
+				$$ = conversaoImplicita($1,auxiliar, "==");
+			}
+
 			;
 
 
@@ -301,6 +319,12 @@ E:			E '+' E
 				$$.traducao = $2.traducao;
 				$$.tipo = $2.tipo;
 
+			}
+			| '-' E
+			{
+				$$.label = $2.label;
+				$$.traducao = $2.traducao + "\t" + $2.label + " = - " + $2.label + ";\n" ;
+				$$.tipo = $2.tipo;
 			}
 			// ---------------------- PARTE LOGICA ---------------------------
 
