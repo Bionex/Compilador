@@ -1,8 +1,16 @@
 int main()
 {
-	int a;
-	int b;
+	int a = 5 * 2 + 4 * 3;
+	
+	print(a);
 
-	a + 1;
+	int b = 3;
+	while(a > 0){
+		int b = 1;
+		a = a - 1;
+		print(a , b);
+	}
+
+	print(b);
 
 }

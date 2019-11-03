@@ -46,6 +46,7 @@ struct coercao verificarCoercao(string , string  ,string );
 KeyTriple genKey(string , string, string);
 struct atributos conversaoImplicita(struct atributos, struct atributos, string);
 struct atributos declaracaoVariavel(string, string);
+struct atributos declaracaoVariavelAtribuicao(string, string, atributos);
 struct atributos operacaoRelacional(struct atributos, struct atributos, string);
 string gerarGotoLabel();
 int getN();
@@ -144,7 +145,7 @@ COMANDOS:	COMANDO COMANDOS {$$.traducao = $1.traducao + $2.traducao;}
 
 COMANDO:	E ';' { $$.traducao = $1.traducao; }
 			| ATRIBUICAO ';' { $$.traducao =$1.traducao;}
-			| DECLARACAO ';'{$$.traducao = "";}
+			| DECLARACAO ';'{$$.traducao = $1.traducao;}
 			| TK_PRINT '('FN_ARGS')' ';' {$$.traducao = $3.traducao + "\t" + "std::cout <<" + $3.label + "<<std::endl;\n";}
 			| IF {$$.traducao = $1.traducao;}
 			| WHILE { $$.traducao = $1.traducao;}
@@ -247,12 +248,12 @@ ATRIBUICAO:	TK_ID '=' E
 				caracteristicas variavel = buscarVariavel($1.label);
 				
 				if(variavel.tipo == $3.tipo){
-					$$.traducao = $3.traducao +  "\t" + $1.label + " = " + $3.label + ";\n";
+					$$.traducao = $3.traducao +  "\t" + variavel.localVar + " = " + $3.label + ";\n";
 				}
 				else{
 					struct coercao correcao = verificarCoercao(variavel.tipo, "=", $3.tipo);
 					if(correcao.retornoTipo != "NULL"){
-						$$.traducao = $3.traducao +  "\t" + $1.label + " = " + "(" + correcao.conversaoTipo + ")" + $3.label + ";\n";
+						$$.traducao = $3.traducao +  "\t" + variavel.localVar + " = " + "(" + correcao.conversaoTipo + ")" + $3.label + ";\n";
 					}
 					else{
 						yyerror("a operacao = nao esta definida para " + variavel.tipo + " e " + $3.tipo);
@@ -262,36 +263,15 @@ ATRIBUICAO:	TK_ID '=' E
 			}
 			;
 
-DECLARACAO:	TK_TIPO_INT TK_ID
+DECLARACAO:	TIPO TK_ID
 			{
-				struct atributos
-				$$ = declaracaoVariavel($2.label, "int");
+				$$ = declaracaoVariavel($2.label, $1.traducao);
 			}
-			| TK_TIPO_INT TK_ID '=' E
+			| TIPO TK_ID '=' E
 			{
-				/*
-				string var = revertTable[$2.label];
-				if(tabela.find(var) != tabela.end()){
-					if(tabela[var].tipo == "Undefined"){
-						tabela[var].tipo = "int";
-						temporarias[$2.label] = "int";
-					}
-				}
-				*/
+				$$ = declaracaoVariavelAtribuicao($2.label, $1.traducao, $4); 
 			}
 
-			| TK_TIPO_FLOAT TK_ID
-			{
-				$$ = declaracaoVariavel($2.label, "float");
-			}
-			| TK_TIPO_CHAR TK_ID
-			{
-				$$ = declaracaoVariavel($2.label, "char");
-			}
-			| TK_TIPO_BOOL TK_ID
-			{
-				$$ = declaracaoVariavel($2.label, "bool");
-			}
 			;
 
 //        ----------------	ARITMETICA -----------------------
@@ -645,6 +625,31 @@ struct atributos declaracaoVariavel(string var, string tipo){
 		yyerror("A variavel \"" + var  + "\" ja foi declada como "+ varCaracteristicas.tipo + " anteriormente\n");
 	}
 
+	return $$;
+}
+
+atributos declaracaoVariavelAtribuicao(string var, string tipo, atributos expressao){
+	atributos $$;
+	$$.traducao = "";
+
+	caracteristicas varCaracteristicas = buscarVariavelTopo(var);
+	
+	if(varCaracteristicas.localVar == ""){
+		//cout << "testando1" << endl;
+		if(varCaracteristicas.tipo == ""){
+			//cout << "testando" << endl;
+			//cout << "declarando "<< var << " como " << tipo << endl;
+			varCaracteristicas.tipo = tipo;
+			varCaracteristicas.localVar =labelUsuario();
+			varCaracteristicas.nomeVar = var;
+			addVar2Escopo(pilhaContexto,varCaracteristicas);
+			temporarias[varCaracteristicas.localVar] = tipo;
+			$$.traducao += expressao.traducao +"\t" + varCaracteristicas.localVar + " = " + expressao.label + ";\n";
+		}
+	}
+	else{
+		yyerror("A variavel \"" + var  + "\" ja foi declada como "+ varCaracteristicas.tipo + " anteriormente\n");
+	}
 	return $$;
 }
 
