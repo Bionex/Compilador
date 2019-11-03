@@ -57,6 +57,7 @@ ID {LETRA}({LETRA}|{NUM})*
 "taylor"	{return TK_DEFAULT;}
 "break"		{return TK_BREAK;}
 "continue"	{return TK_CONTINUE;}
+"all"       {return TK_ALL;}
 "do"		{return TK_DO;}
 
 {NUM}		{yylval.traducao = yytext; return TK_NUM; }

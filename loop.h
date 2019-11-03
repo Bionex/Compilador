@@ -41,11 +41,21 @@ Loop getLoop (pilhaLoopPtr stack){
     }
 }
 
+Loop getLoopAt(pilhaLoopPtr stack , int n){
+    if(stack->loops.size() > n){
+        //cout<<"getting loop"<< endl;
+        Loop loop = stack->loops[n];
+        
+        return loop;
+    }
+}
+
 pilhaLoopPtr createLoopStack(){
     //cout<<"creating loop"<< endl;
     return (pilhaLoopPtr) malloc(sizeof(pilhaLoop));
 }
 
-bool hasLoop(pilhaLoopPtr stack){
-    return stack->loops.size() > 0;
+int hasLoop(pilhaLoopPtr stack){
+    //cout << "retornando " << stack->loops.size() << endl;
+    return stack->loops.size();
 }

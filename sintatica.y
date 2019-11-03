@@ -100,7 +100,7 @@ std::map<KeyTriple, struct coercao> tabelaCoercao;
 %token TK_AND TK_OR TK_NOT
 %token TK_LOGICO
 %token TK_PRINT TK_IF TK_WHILE TK_FOR TK_ELSE TK_SWITCH TK_CASE TK_DEFAULT TK_DO
-%token TK_BREAK TK_CONTINUE
+%token TK_BREAK TK_CONTINUE TK_ALL
 
 
 
@@ -154,18 +154,63 @@ COMANDO:	E ';' { $$.traducao = $1.traducao; }
 			| WHILE { $$.traducao = $1.traducao;}
 			| SWITCH { $$.traducao = $1.traducao;}
 			| DO ';'{$$.traducao = $1.traducao;}
-			| TK_BREAK ';'
+			| BREAK ';' {$$.traducao = $1.traducao;}
+			| CONTINUE ';'{ $$.traducao = $1.traducao;}
+			| ';'
+			;
+
+BREAK:		TK_BREAK
 			{
 				if(!hasLoop(loops))
 					yyerror("Break fora de um loop");
-				$$.traducao = "\tgoto " + getLoop(loops).endLabel + ";\n";			
+				$$.traducao = "\tgoto " + getLoop(loops).endLabel + ";\n";		
 			}
-			| TK_CONTINUE ';'{
+			| TK_BREAK TK_NUM
+			{
+				int size = hasLoop(loops);
+				int N = stoi($2.traducao);
+				if(N == 0){
+					yyerror("O valor do break precisa ser >= 1 ");
+				}
+				//cout << "N = " << N << " size = " << size << endl;
+				if(N > size)
+					yyerror("Break com N maior que numero de lacos");
+				$$.traducao = "\tgoto " + getLoopAt(loops,size - N).endLabel + ";\n";
+			}
+			| TK_BREAK TK_ALL
+			{
+				if(!hasLoop(loops)){
+					yyerror("Break fora de um loop");
+				}
+				$$.traducao = "\tgoto " + getLoopAt(loops, 0).endLabel + ";\n";
+			}
+			;
+
+CONTINUE: 	TK_CONTINUE
+			{
 				if(!hasLoop(loops))
 					yyerror("Continue fora de um loop");
 				$$.traducao = "\tgoto " + getLoop(loops).continueLabel + ";\n";
 			}
-			| ';'
+			| TK_CONTINUE TK_NUM
+			{
+				int size = hasLoop(loops);
+				int N = stoi($2.traducao);
+				if(N == 0){
+					yyerror("O valor do continue precisa ser >= 1 ");
+				}
+				//cout << "N = " << N << " size = " << size << endl;
+				if(N > size)
+					yyerror("Continue com N maior que numero de lacos");
+				$$.traducao = "\tgoto " + getLoopAt(loops, size - N).continueLabel + ";\n";
+			}
+			| TK_CONTINUE TK_ALL
+			{
+				if(!hasLoop(loops)){
+					yyerror("Continue fora de um loop");
+				}
+				$$.traducao = "\tgoto " + getLoopAt(loops, 0).continueLabel + ";\n";
+			}
 			;
 
 DO:			DO_AUX TK_DO BLOCO TK_WHILE '(' E ')'
@@ -712,7 +757,7 @@ atributos declaracaoVariavelAtribuicao(string var, string tipo, atributos expres
 			//cout << "testando" << endl;
 			//cout << "declarando "<< var << " como " << tipo << endl;
 			varCaracteristicas.tipo = tipo;
-			varCaracteristicas.localVar =labelUsuario();
+			varCaracteristicas.localVar = labelUsuario();
 			varCaracteristicas.nomeVar = var;
 			addVar2Escopo(pilhaContexto,varCaracteristicas);
 			temporarias[varCaracteristicas.localVar] = tipo;
