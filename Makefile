@@ -6,7 +6,7 @@ all:
 
 		@./glf < exemplo.foca 2> debug.cpp | tee test.cpp
 
-		@rm y.tab.c y.tab.h lex.yy.c glf
+		@rm y.tab.c y.tab.h lex.yy.c
 
 testar:
 		@reset
@@ -19,4 +19,4 @@ testar:
 		@echo "\nExecutando o codigo intermediario\n"
 		@./test | tee result.txt
 
-		@rm y.tab.c y.tab.h lex.yy.c glf
+		@rm y.tab.c y.tab.h lex.yy.c

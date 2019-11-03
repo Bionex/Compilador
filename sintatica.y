@@ -97,7 +97,7 @@ std::map<KeyTriple, struct coercao> tabelaCoercao;
 %token TK_EQ TK_NOT_EQ TK_BIG_EQ TK_SMALL_EQ
 %token TK_AND TK_OR TK_NOT
 %token TK_LOGICO
-%token TK_PRINT TK_IF TK_WHILE TK_FOR TK_ELSE TK_SWITCH TK_CASE TK_DEFAULT
+%token TK_PRINT TK_IF TK_WHILE TK_FOR TK_ELSE TK_SWITCH TK_CASE TK_DEFAULT TK_DO
 %token TK_BREAK TK_CONTINUE
 
 
@@ -150,8 +150,25 @@ COMANDO:	E ';' { $$.traducao = $1.traducao; }
 			| IF {$$.traducao = $1.traducao;}
 			| WHILE { $$.traducao = $1.traducao;}
 			| SWITCH { $$.traducao = $1.traducao;}
+			| DO ';'{$$.traducao = $1.traducao;}
 			| ';'
 			;
+
+DO:			TK_DO BLOCO TK_WHILE '(' E ')'
+			{
+				string startLabel = gerarGotoLabel();
+				string endLabel = gerarGotoLabel();
+				string continueLabel = gerarGotoLabel();
+
+				$$.traducao = "\t" + startLabel + ":\n" + $2.traducao;
+				$$.traducao += "\t" + continueLabel + ":\n";
+				$$.traducao += $5.traducao;
+				$$.traducao += "\t" + $5.label + " = !" + $5.label + ";\n";
+				$$.traducao += "\tif( " + $5.label + " ) goto " + endLabel + ";\n";
+				$$.traducao += "\tgoto " + startLabel + ";\n";
+				$$.traducao += "\t" + endLabel + ":\n";
+
+			}
 
 SWITCH:		TK_SWITCH '(' SWITCH_AUX ')' '{' caseRecursao TK_DEFAULT':' BLOMANDO '}'
 			{
