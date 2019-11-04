@@ -46,6 +46,8 @@ using namespace std;
 %left '+' '-'
 %left '*' '/'
 %left '(' ')'
+%left UMINUS
+
 
 
 
@@ -377,7 +379,7 @@ E:			E '+' E
 				$$.tipo = $2.tipo;
 
 			}
-			| '-' E
+			| '-' E %prec UMINUS
 			{
 				$$.label = $2.label;
 				$$.traducao = $2.traducao + "\t" + $2.label + " = - " + $2.label + ";\n" ;
@@ -473,6 +475,7 @@ E:			E '+' E
 
 			}
 			;
+
 
 TIPO:		TK_TIPO_BOOL	{$$.traducao = "bool";}
 			| TK_TIPO_INT	{$$.traducao = "int";}

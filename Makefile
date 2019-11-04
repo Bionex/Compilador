@@ -16,7 +16,6 @@ testar:
 		@echo "\nExecutando o codigo intermediario\n"
 		@./test | tee result.txt
 
-		@rm y.tab.c y.tab.h lex.yy.c
 
 no-build:
 		@./glf < exemplo.foca 2> debug.cpp | tee test.cpp

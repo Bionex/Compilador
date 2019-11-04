@@ -1,11 +1,10 @@
 int main()
 {
-	int a;
+	int a = -(1 * 2 * 3);
 	float b;
 
-	scan(int:a, float:b)
 	print(a , b);
 
-	break;
+	
 
 }
