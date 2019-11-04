@@ -30,6 +30,7 @@ Loop getLoop (pilhaLoopPtr);
 Loop getLoopAt(pilhaLoopPtr , int);
 pilhaLoopPtr createLoopStack();
 int hasLoop(pilhaLoopPtr);
+Loop createLoop(string);
 
 
 #endif

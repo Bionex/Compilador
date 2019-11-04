@@ -7,6 +7,12 @@ using namespace std;
 int nTemp = 0;
 int nUser = 0;
 int nGoto = 0;
+int nGotoIf = 0;
+int nGotoSwitch = 0;
+int nGotoCase = 0;
+int nGotoWhile = 0;
+int nGotoDo = 0;
+int nGotoFor = 0;
 int lineCount = 1;
 
 stack <SwitchLabels> gambiarraSwitch ;
@@ -37,6 +43,36 @@ string gerarLabel(){
 string gerarGotoLabel(){
 	return string("Label") + to_string(nGoto++);
 	
+}
+
+Loop gerarGotoDoLabel(){
+	string startLabel = "do_inicio_" + to_string(nGotoDo);
+	string endLabel = "do_fim_" + to_string(nGotoDo);
+	string continueLabel = "do_continue_" + to_string(nGotoDo++);
+
+	Loop loopinho = {startLabel, endLabel, continueLabel};
+	return loopinho;
+}
+
+Loop gerarGotoWhileLabel(){
+	string startLabel = "while_inicio_continue_" + to_string(nGotoWhile);
+	string endLabel = "while_fim_" + to_string(nGotoWhile++);
+
+	Loop loopinho = {startLabel, endLabel, startLabel};
+
+	return loopinho;
+
+}
+
+Loop gerarGotoForLabel(){
+
+}
+
+string gerarGotoCaseLabel(int nSwitch){
+	return "switch_"+to_string(nSwitch) + "_case_" + to_string(nGotoCase++);
+}
+string gerarGotoSwitchLabel(){
+	return "switch_" + to_string(nGotoSwitch++) + "_fim";
 }
 
 string labelUsuario(){

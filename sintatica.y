@@ -88,9 +88,10 @@ COMANDO:	E PTO_VIRGULA { $$.traducao = $1.traducao; }
 			| DECLARACAO PTO_VIRGULA {$$.traducao = $1.traducao;}
 			| TK_PRINT '('FN_ARGS')' PTO_VIRGULA {$$.traducao = $3.traducao + "\t" + "std::cout <<" + $3.label + "<<std::endl;\n";}
 			| IF {$$.traducao = $1.traducao;}
-			| WHILE { $$.traducao = $1.traducao;}
+			/*| WHILE { $$.traducao = $1.traducao;}
+			| DO PTO_VIRGULA{$$.traducao = $1.traducao;}*/
 			| SWITCH { $$.traducao = $1.traducao;}
-			| DO PTO_VIRGULA{$$.traducao = $1.traducao;}
+			| LOOP_AUX LOOP {$$.traducao = $2.traducao;}
 			| BREAK PTO_VIRGULA {$$.traducao = $1.traducao;}
 			| CONTINUE PTO_VIRGULA{ $$.traducao = $1.traducao;}
 			| SCAN PTO_VIRGULA {$$.traducao = $1.traducao;}
@@ -155,36 +156,37 @@ CONTINUE: 	TK_CONTINUE
 			}
 			;
 
-DO:			DO_AUX TK_DO BLOCO TK_WHILE '(' E ')'
+LOOP: 		DO PTO_VIRGULA {$$.traducao = $1.traducao;}
+			| WHILE { $$.traducao = $1.traducao;}
+			;
+
+LOOP_AUX:	TK_DO {Loop loopinho= createLoop("do") ; pushLoop(loopinho, loops);}
+			| TK_WHILE { Loop loopinho= createLoop("while") ; pushLoop(loopinho, loops);}
+			;
+
+
+DO:			BLOCO TK_WHILE '(' E ')'
 			{
 				Loop loopinho = getLoop(loops);
 
-				$$.traducao = "\t" + loopinho.startLabel + ":\n" + $3.traducao;
+				$$.traducao = "\t" + loopinho.startLabel + ":\n" + $1.traducao;
 				$$.traducao += "\t" + loopinho.continueLabel + ":\n";
-				$$.traducao += $6.traducao;
-				$$.traducao += "\t" + $6.label + " = !" + $6.label + ";\n";
-				$$.traducao += "\tif( " + $6.label + " ) goto " + loopinho.endLabel + ";\n";
+				$$.traducao += $4.traducao;
+				$$.traducao += "\t" + $4.label + " = !" + $4.label + ";\n";
+				$$.traducao += "\tif( " + $4.label + " ) goto " + loopinho.endLabel + ";\n";
 				$$.traducao += "\tgoto " + loopinho.startLabel + ";\n";
 				$$.traducao += "\t" + loopinho.endLabel + ":\n";
 
 				popLoop(loops);
 
 			}
-DO_AUX:		/*vazio */
-			{
-				string startLabel = gerarGotoLabel();
-				string endLabel = gerarGotoLabel();
-				string continueLabel = gerarGotoLabel();
 
-				Loop loopinho = {startLabel, endLabel, continueLabel};
-				pushLoop(loopinho, loops);
-			}
-
-SWITCH:		TK_SWITCH '(' SWITCH_AUX ')' '{' caseRecursao TK_DEFAULT':' BLOMANDO '}'
+SWITCH:		TK_SWITCH '(' SWITCH_AUX ')' '{' caseRecursao TK_DEFAULT':' COMANDOS '}'
 			{
 					$$.traducao = $6.traducao + $9.traducao + "\t" + gambiarraSwitch.top().endLabel + ":\n";
-					nGoto -= 1;
+					//nGoto -= 1;
 					gambiarraSwitch.pop();
+					nGotoCase = 0;
 			}
 			;
 			
@@ -192,8 +194,8 @@ SWITCH:		TK_SWITCH '(' SWITCH_AUX ')' '{' caseRecursao TK_DEFAULT':' BLOMANDO '}
 SWITCH_AUX: TK_ID
 			{
 				SwitchLabels a;
-				a.endLabel = gerarGotoLabel();
-				a.nextLabel = gerarGotoLabel();
+				a.endLabel = gerarGotoSwitchLabel();
+				a.nextLabel = gerarGotoCaseLabel(a.nSwitch);
 				a.variavel = buscarVariavel($1.label);
 				gambiarraSwitch.push(a);
 				
@@ -211,7 +213,7 @@ caseRecursao: /*vazio */{ $$.traducao = "";}
 				$$.traducao += $4.traducao;
 
 				$$.traducao += "\tgoto " + topoDaPilha.endLabel+ ";\n\t" + topoDaPilha.nextLabel + ":\n" +$5.traducao ;
-				gambiarraSwitch.top().nextLabel = gerarGotoLabel();
+				gambiarraSwitch.top().nextLabel = gerarGotoCaseLabel(topoDaPilha.nSwitch);
 			}
 			;
 
@@ -259,23 +261,15 @@ BLOMANDO: BLOCO
 		;
 
 
-WHILE:		WHILE_AUX TK_WHILE '(' E ')' BLOMANDO 
+WHILE:		'(' E ')' BLOMANDO 
 			{
 				Loop loopinho = getLoop(loops);
-				$$.traducao = "\t"+ loopinho.startLabel + ":\n" +$4.traducao + "\t" + $4.label + " = !" + $4.label + ";\n" + "\tif( " + $4.label + " ) goto " + loopinho.endLabel + ";\n" + $6.traducao + "\tgoto "+ loopinho.startLabel + ";\n\t" + loopinho.endLabel + ":\n";
+				$$.traducao = "\t"+ loopinho.startLabel + ":\n" +$2.traducao + "\t" + $2.label + " = !" + $2.label + ";\n" + "\tif( " + $2.label + " ) goto " + loopinho.endLabel + ";\n" + $4.traducao + "\tgoto "+ loopinho.startLabel + ";\n\t" + loopinho.endLabel + ":\n";
 				popLoop(loops);
 				//cout<< "teste2" << endl; 
 			}
 			;
 
-WHILE_AUX:	/*VAZIO */
-			{
-				string startLabel = gerarGotoLabel();
-				string endLabel = gerarGotoLabel();
-				Loop loopinho = {startLabel, endLabel, startLabel};
-				pushLoop(loopinho, loops);
-			} 
-			;
 
 FN_ARGS:	E FN_ARGS_AUX 
 			{

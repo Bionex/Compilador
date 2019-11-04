@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../headers/loop.h"
+#include "../headers/funcoes.h"
 
 using namespace std;
 
@@ -49,4 +50,16 @@ pilhaLoopPtr createLoopStack(){
 int hasLoop(pilhaLoopPtr stack){
     //cout << "retornando " << stack->loops.size() << endl;
     return stack->loops.size();
+}
+
+Loop createLoop(string loopType){
+    if(loopType == "do"){
+        return gerarGotoDoLabel();
+    }
+    else if(loopType == "while"){
+        return gerarGotoWhileLabel();
+    }
+    else if( loopType == "for"){
+        return gerarGotoForLabel();
+    }
 }

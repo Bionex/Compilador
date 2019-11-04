@@ -26,6 +26,7 @@ typedef struct SwitchLabelStacks{
 	string endLabel;
 	string nextLabel;
 	caracteristicas variavel;
+	int nSwitch;
 } SwitchLabels;
 
 struct coercao{
@@ -50,6 +51,11 @@ struct atributos declaracaoVariavel(string, string);
 struct atributos declaracaoVariavelAtribuicao(string, string, atributos);
 struct atributos operacaoRelacional(struct atributos, struct atributos, string);
 string gerarGotoLabel();
+Loop gerarGotoDoLabel();
+Loop gerarGotoWhileLabel();
+Loop gerarGotoForLabel();
+string gerarGotoCaseLabel(int);
+string gerarGotoSwitchLabel();
 int getN();
 vector<string> split(const string&, const string&);
 void inicializarTabelaCoercao();
@@ -61,6 +67,12 @@ bool operator<(KeyTriple, KeyTriple);
 extern int nTemp;
 extern int nUser;
 extern int nGoto;
+extern int nGotoIf;
+extern int nGotoSwitch;
+extern int nGotoCase;
+extern int nGotoWhile;
+extern int nGotoDo;
+extern int nGotoFor;
 extern int lineCount;
 
 extern stack <SwitchLabels> gambiarraSwitch ;
