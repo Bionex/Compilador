@@ -3,10 +3,7 @@ int main()
 	int a;
 	float b;
 
-	break;
-	break;
-
-	scan(int:a, float:b);
+	scan(int:a, float:b)
 	print(a , b);
 
 	break;

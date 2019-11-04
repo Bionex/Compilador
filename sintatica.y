@@ -54,7 +54,6 @@ using namespace std;
 //{          ---------------- REGRAS ---------------------
 S:			TK_TIPO_INT TK_MAIN '(' ')' BLOCO
 			{
-				//cout << "temErro = " << temErro << endl;
 				if(temErro){
 					cout << erros;
 				}
@@ -82,24 +81,23 @@ COMANDOS:	COMANDO COMANDOS {$$.traducao = $1.traducao + $2.traducao;}
 			| {  $$.traducao = "" ;}
 			;
 
-COMANDO:	E ';' { $$.traducao = $1.traducao; }
-			| ATRIBUICAO ';' { $$.traducao =$1.traducao;}
-			| DECLARACAO ';'{$$.traducao = $1.traducao;}
-			| TK_PRINT '('FN_ARGS')' ';' {$$.traducao = $3.traducao + "\t" + "std::cout <<" + $3.label + "<<std::endl;\n";}
+COMANDO:	E PTO_VIRGULA { $$.traducao = $1.traducao; }
+			| ATRIBUICAO PTO_VIRGULA { $$.traducao =$1.traducao;}
+			| DECLARACAO PTO_VIRGULA {$$.traducao = $1.traducao;}
+			| TK_PRINT '('FN_ARGS')' PTO_VIRGULA {$$.traducao = $3.traducao + "\t" + "std::cout <<" + $3.label + "<<std::endl;\n";}
 			| IF {$$.traducao = $1.traducao;}
 			| WHILE { $$.traducao = $1.traducao;}
 			| SWITCH { $$.traducao = $1.traducao;}
-			| DO ';'{$$.traducao = $1.traducao;}
-			| BREAK ';' {$$.traducao = $1.traducao;}
-			| CONTINUE ';'{ $$.traducao = $1.traducao;}
-			| SCAN ';' {$$.traducao = $1.traducao;}
-			| ';'
+			| DO PTO_VIRGULA{$$.traducao = $1.traducao;}
+			| BREAK PTO_VIRGULA {$$.traducao = $1.traducao;}
+			| CONTINUE PTO_VIRGULA{ $$.traducao = $1.traducao;}
+			| SCAN PTO_VIRGULA {$$.traducao = $1.traducao;}
+			| PTO_VIRGULA
 			;
-/*
+
 PTO_VIRGULA: ';' {}
-			| /* vazio */ /*{yyerror("Falta de ;");}
-			;
-*/ 
+			| error {yyerror("Falta de ponto e virgula");}
+
 
 BREAK:		TK_BREAK
 			{

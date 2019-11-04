@@ -23,8 +23,6 @@ std::map<KeyTriple, struct coercao> tabelaCoercao;
 
 void yyerror( string MSG )
 {
-	if(MSG == "syntax error")
-		cout << MSG << " aa" << endl;
 
 	erros += "linha " + to_string(lineCount) + ": " + MSG + "\n";
 	temErro = true;
