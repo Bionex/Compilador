@@ -1,21 +1,14 @@
 int main()
 {
-	int a = 0;
-	int b = 0;
+	int a;
+	float b;
 
+	break;
+	break;
 
-	while(a < 20){
-		b = 0;
-		while( b < 20){
-			if(a == 10)
-				break all;
-			print(a,b);
+	scan(int:a, float:b);
+	print(a , b);
 
-			if(b == 10)
-				break;
-			
-			b = b + 1;
-		}
-		a = a + 1;
-	}
+	break;
+
 }

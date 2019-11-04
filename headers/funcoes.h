@@ -65,6 +65,9 @@ extern int lineCount;
 
 extern stack <SwitchLabels> gambiarraSwitch ;
 
+extern string erros;
+extern bool temErro ;
+
 extern pilhaMapaPtr pilhaContexto;
 extern pilhaLoopPtr loops;
 

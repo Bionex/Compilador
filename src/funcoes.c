@@ -11,6 +11,9 @@ int lineCount = 1;
 
 stack <SwitchLabels> gambiarraSwitch ;
 
+string erros = "\n";
+bool temErro = 0;
+
 pilhaMapaPtr pilhaContexto = createMapStack();
 pilhaLoopPtr loops = createLoopStack();
 
@@ -20,8 +23,12 @@ std::map<KeyTriple, struct coercao> tabelaCoercao;
 
 void yyerror( string MSG )
 {
-	cout << MSG << endl;
-	exit (0);
+	if(MSG == "syntax error")
+		cout << MSG << " aa" << endl;
+
+	erros += "linha " + to_string(lineCount) + ": " + MSG + "\n";
+	temErro = true;
+	return;
 }				
 
 string gerarLabel(){
@@ -225,7 +232,7 @@ struct atributos declaracaoVariavel(string var, string tipo){
 		}
 	}
 	else{
-		yyerror("A variavel \"" + var  + "\" ja foi declada como "+ varCaracteristicas.tipo + " anteriormente\n");
+		yyerror("A variavel \"" + var  + "\" ja foi declada como "+ varCaracteristicas.tipo + " anteriormente");
 	}
 
 	return $$;
@@ -251,7 +258,7 @@ atributos declaracaoVariavelAtribuicao(string var, string tipo, atributos expres
 		}
 	}
 	else{
-		yyerror("A variavel \"" + var  + "\" ja foi declada como "+ varCaracteristicas.tipo + " anteriormente\n");
+		yyerror("A variavel \"" + var  + "\" ja foi declada como "+ varCaracteristicas.tipo + " anteriormente");
 	}
 	return $$;
 }

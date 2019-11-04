@@ -30,9 +30,9 @@ using namespace std;
 %token TK_EQ TK_NOT_EQ TK_BIG_EQ TK_SMALL_EQ
 %token TK_AND TK_OR TK_NOT
 %token TK_LOGICO
-%token TK_PRINT TK_IF TK_WHILE TK_FOR TK_ELSE TK_SWITCH TK_CASE TK_DEFAULT TK_DO
+%token TK_IF TK_WHILE TK_FOR TK_ELSE TK_SWITCH TK_CASE TK_DEFAULT TK_DO 
 %token TK_BREAK TK_CONTINUE TK_ALL
-
+%token TK_PRINT TK_SCAN
 
 
 %start S
@@ -54,7 +54,12 @@ using namespace std;
 //{          ---------------- REGRAS ---------------------
 S:			TK_TIPO_INT TK_MAIN '(' ')' BLOCO
 			{
-				cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\n\n#define BOOL int\n\nint main(void)\n{\n" << declararVars() << "\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
+				//cout << "temErro = " << temErro << endl;
+				if(temErro){
+					cout << erros;
+				}
+				else
+					cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\n\n#define BOOL int\n\nint main(void)\n{\n" << declararVars() << "\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
 			}
 			;
 
@@ -87,8 +92,14 @@ COMANDO:	E ';' { $$.traducao = $1.traducao; }
 			| DO ';'{$$.traducao = $1.traducao;}
 			| BREAK ';' {$$.traducao = $1.traducao;}
 			| CONTINUE ';'{ $$.traducao = $1.traducao;}
+			| SCAN ';' {$$.traducao = $1.traducao;}
 			| ';'
 			;
+/*
+PTO_VIRGULA: ';' {}
+			| /* vazio */ /*{yyerror("Falta de ;");}
+			;
+*/ 
 
 BREAK:		TK_BREAK
 			{
@@ -281,6 +292,30 @@ FN_ARGS_AUX: ',' E  FN_ARGS_AUX
 			| /* empty */{$$.traducao = ""; $$.label = ""; }
 			;
 
+SCAN:		TK_SCAN '(' SCAN_ARGS ')' 
+			{
+				$$.traducao = "\tstd::cin" + $3.traducao + ";\n";
+			}
+			;
+
+SCAN_ARGS:	TIPO ':' TK_ID ',' SCAN_ARGS
+			{
+				caracteristicas variavel = buscarVariavel($3.label);
+				if($1.traducao != variavel.tipo)
+					yyerror("A variavel \""+variavel.nomeVar + "\" eh do tipo " + variavel.tipo + " e o tipo requisitado eh "+ $1.traducao);
+				
+				$$.traducao = " >> " + variavel.localVar + $5.traducao;
+
+			}
+			| TIPO ':' TK_ID
+			{
+				caracteristicas variavel = buscarVariavel($3.label);
+				if($1.traducao != variavel.tipo)
+					yyerror("A variavel \""+variavel.nomeVar + "\" eh do tipo " + variavel.tipo + " e o tipo requisitado eh "+ $1.traducao);
+				
+				$$.traducao = " >> " + variavel.localVar;
+			}
+			;
 
 ATRIBUICAO:	TK_ID '=' E 
 			{
