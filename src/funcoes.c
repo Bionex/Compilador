@@ -65,7 +65,12 @@ Loop gerarGotoWhileLabel(){
 }
 
 Loop gerarGotoForLabel(){
+	string startLabel = "for_inicio_" + to_string(nGotoFor);
+	string endLabel = "for_fim_" + to_string(nGotoFor);
+	string continueLabel = "for_continue_" + to_string(nGotoFor++);
 
+	Loop loopinho = {startLabel, endLabel, continueLabel};
+	return loopinho;
 }
 
 string gerarGotoCaseLabel(int nSwitch){

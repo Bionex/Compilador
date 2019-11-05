@@ -60,7 +60,7 @@ S:			TK_TIPO_INT TK_MAIN '(' ')' BLOCO
 					cout << erros;
 				}
 				else
-					cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\n\n#define BOOL int\n\nint main(void)\n{\n" << declararVars() << "\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
+					cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\n\n#define BOOL int\n#define True 1\n#define False 0\n\nint main(void)\n{\n" << declararVars() << "\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
 			}
 			;
 
@@ -158,12 +158,69 @@ CONTINUE: 	TK_CONTINUE
 
 LOOP: 		DO PTO_VIRGULA {$$.traducao = $1.traducao;}
 			| WHILE { $$.traducao = $1.traducao;}
+			| FOR {$$.traducao = $1.traducao;}
 			;
 
 LOOP_AUX:	TK_DO {Loop loopinho= createLoop("do") ; pushLoop(loopinho, loops);}
 			| TK_WHILE { Loop loopinho= createLoop("while") ; pushLoop(loopinho, loops);}
+			| TK_FOR {Loop loopinho = createLoop("for"); pushLoop(loopinho, loops);}
 			;
 
+FOR: 		'(' FOR_ARG1 ';' FOR_ARG2 ';' FOR_ARG3 ')' COMANDOS 
+			{
+				Loop loopinho = getLoop(loops);
+				$$.traducao = $2.traducao + "\t" +loopinho.startLabel+ ":\n" +$4.traducao;
+				$$.traducao += "\t" + $4.label + " = !" + $4.label + ";\n";
+				$$.traducao += "\tif( " + $4.label + ") goto " + loopinho.endLabel + ";\n";
+				$$.traducao += $8.traducao + "\t" + loopinho.continueLabel + ":\n";
+				$$.traducao += $6.traducao;
+				$$.traducao += "\tgoto " + loopinho.startLabel + ";\n";
+				$$.traducao += "\t" + loopinho.endLabel + ":\n";
+			}
+			;
+
+FOR_ARG1:	DECLARACAO {$$.traducao = $1.traducao;}
+			| ATRIBUICAO ',' FOR_ARG1_AUX {$$.traducao = $1.traducao + $3.traducao;}
+			| /* VAZIO */ { $$.traducao = "";}
+			;
+
+FOR_ARG1_AUX: ATRIBUICAO ',' FOR_ARG1_AUX {$$.traducao = $1.traducao + $3.traducao;}
+			| ATRIBUICAO {$$.traducao = $1.traducao;}
+			;
+
+FOR_ARG2:	/* vazio */
+			{ 
+				$$.label = gerarLabel();
+				inserirTemporaria($$.label, "bool");
+				$$.traducao = "\t" + $$.label + " = True;\n";
+			}
+			| E 
+			{
+				$$.traducao = $1.traducao;
+			}
+			| E ',' FOR_ARG2_AUX 
+			{
+				$$.traducao = $1.traducao + $3.traducao;
+				$$.label = $3.label;
+			}
+			;
+
+FOR_ARG2_AUX: E {$$.label = $1.label; $$.traducao = $1.traducao;}
+			| E ',' FOR_ARG2_AUX {$$.traducao = $1.traducao + $3.traducao; $$.label = $3.label;}
+			;
+
+FOR_ARG3:	E {$$.traducao = $1.traducao;}
+			| E ',' FOR_ARG3_AUX {$$.traducao = $1.traducao + $3.traducao;}
+			| ATRIBUICAO {$$.traducao = $1.traducao;}
+			| ATRIBUICAO ',' FOR_ARG3_AUX {$$.traducao = $1.traducao + $3.traducao;}
+			| /*vazio */ {$$.traducao = "";}
+			;
+
+FOR_ARG3_AUX: E {$$.traducao = $1.traducao;}
+			| E ',' FOR_ARG3_AUX {$$.traducao = $1.traducao + $3.traducao;}
+			| ATRIBUICAO {$$.traducao = $1.traducao;}
+			| ATRIBUICAO ',' FOR_ARG3_AUX {$$.traducao = $1.traducao + $3.traducao;}
+			;
 
 DO:			BLOCO TK_WHILE '(' E ')'
 			{
