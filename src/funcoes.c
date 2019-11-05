@@ -17,6 +17,8 @@ int lineCount = 1;
 
 stack <SwitchLabels> gambiarraSwitch ;
 
+string tipoDaDeclaracao = "";
+
 string erros = "\n";
 bool temErro = 0;
 
@@ -268,6 +270,14 @@ struct atributos declaracaoVariavel(string var, string tipo){
 			varCaracteristicas.nomeVar = var;
 			addVar2Escopo(pilhaContexto,varCaracteristicas);
 			temporarias[varCaracteristicas.localVar] = tipo;
+			if(tipo == "int")
+				$$.traducao += "\t" + varCaracteristicas.localVar + " = 0;\n";
+			else if(tipo == "bool")
+				$$.traducao += "\t" + varCaracteristicas.localVar + " = False;\n";
+			else if(tipo == "float")
+				$$.traducao += "\t" + varCaracteristicas.localVar + " = 0.0;\n";
+			else if(tipo == "char")
+				$$.traducao += "\t" + varCaracteristicas.localVar + " = 'a';\n";
 		}
 	}
 	else{

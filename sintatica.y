@@ -156,17 +156,35 @@ CONTINUE: 	TK_CONTINUE
 			}
 			;
 
-LOOP: 		DO PTO_VIRGULA {$$.traducao = $1.traducao;}
-			| WHILE { $$.traducao = $1.traducao;}
-			| FOR {$$.traducao = $1.traducao;}
+LOOP: 		DO PTO_VIRGULA {$$.traducao = $1.traducao; popEscopo(pilhaContexto);}
+			| WHILE { $$.traducao = $1.traducao; popEscopo(pilhaContexto);}
+			| FOR {$$.traducao = $1.traducao; popEscopo(pilhaContexto);}
 			;
 
-LOOP_AUX:	TK_DO {Loop loopinho= createLoop("do") ; pushLoop(loopinho, loops);}
-			| TK_WHILE { Loop loopinho= createLoop("while") ; pushLoop(loopinho, loops);}
-			| TK_FOR {Loop loopinho = createLoop("for"); pushLoop(loopinho, loops);}
+LOOP_AUX:	TK_DO 
+			{
+				Loop loopinho= createLoop("do") ;
+				pushLoop(loopinho, loops);
+				tabelaVariavel tabela;
+				pushEscopo(pilhaContexto, tabela);
+			}
+			| TK_WHILE 
+			{ 
+				Loop loopinho= createLoop("while") ; 
+				pushLoop(loopinho, loops);
+				tabelaVariavel tabela;
+				pushEscopo(pilhaContexto, tabela);
+			}
+			| TK_FOR 
+			{
+				Loop loopinho = createLoop("for");
+				 pushLoop(loopinho, loops);
+				 tabelaVariavel tabela;
+				pushEscopo(pilhaContexto, tabela);
+			}
 			;
 
-FOR: 		'(' FOR_ARG1 ';' FOR_ARG2 ';' FOR_ARG3 ')' COMANDOS 
+FOR: 		'(' FOR_ARG1 ';' FOR_ARG2 ';' FOR_ARG3 ')' BLOMANDO
 			{
 				Loop loopinho = getLoop(loops);
 				$$.traducao = $2.traducao + "\t" +loopinho.startLabel+ ":\n" +$4.traducao;
@@ -222,7 +240,7 @@ FOR_ARG3_AUX: E {$$.traducao = $1.traducao;}
 			| ATRIBUICAO ',' FOR_ARG3_AUX {$$.traducao = $1.traducao + $3.traducao;}
 			;
 
-DO:			BLOCO TK_WHILE '(' E ')'
+DO:			BLOMANDO TK_WHILE '(' E ')'
 			{
 				Loop loopinho = getLoop(loops);
 
@@ -313,7 +331,7 @@ IF:			TK_IF '(' E ')' BLOMANDO
 			;
 
 /* ----------------JUNCAO DE BLOCO COM COMANDO ------------------------*/
-BLOMANDO: BLOCO 
+BLOMANDO: '{' COMANDOS '}' {$$.traducao = $2.traducao;}
 		| COMANDO
 		;
 
@@ -391,15 +409,28 @@ ATRIBUICAO:	TK_ID '=' E
 
 
 
-DECLARACAO:	TIPO TK_ID
+DECLARACAO:	TIPO TK_ID DECLARACAO_AUX
 			{
 				$$ = declaracaoVariavel($2.label, $1.traducao);
 			}
-			| TIPO TK_ID '=' E
+			| TIPO TK_ID '=' E DECLARACAO_AUX
 			{
-				$$ = declaracaoVariavelAtribuicao($2.label, $1.traducao, $4); 
+				$$ = declaracaoVariavelAtribuicao($2.label, $1.traducao, $4);
+				$$.traducao += $5.traducao;
 			}
+			;
 
+DECLARACAO_AUX:',' TK_ID DECLARACAO_AUX 
+			{
+				$$ = declaracaoVariavel($2.label,tipoDaDeclaracao);
+				$$.traducao += $3.traducao;
+			}
+			| ',' TK_ID '=' E  DECLARACAO_AUX 
+			{
+				$$ = declaracaoVariavelAtribuicao($2.label, tipoDaDeclaracao, $4);
+				$$.traducao += $5.traducao;
+			}
+			| /*vazio */ {$$.traducao = "";}
 			;
 
 //        ----------------	ARITMETICA -----------------------
@@ -528,10 +559,10 @@ E:			E '+' E
 			;
 
 
-TIPO:		TK_TIPO_BOOL	{$$.traducao = "bool";}
-			| TK_TIPO_INT	{$$.traducao = "int";}
-			| TK_TIPO_CHAR	{$$.traducao = "char";}
-			| TK_TIPO_FLOAT	{$$.traducao = "float";}
+TIPO:		TK_TIPO_BOOL	{$$.traducao = "bool"; tipoDaDeclaracao = "bool";}
+			| TK_TIPO_INT	{$$.traducao = "int"; tipoDaDeclaracao = "int";}
+			| TK_TIPO_CHAR	{$$.traducao = "char"; tipoDaDeclaracao = "char";}
+			| TK_TIPO_FLOAT	{$$.traducao = "float"; tipoDaDeclaracao = "float";}
 //}
 %%
 

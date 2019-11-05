@@ -77,6 +77,8 @@ extern int lineCount;
 
 extern stack <SwitchLabels> gambiarraSwitch ;
 
+extern string tipoDaDeclaracao;
+
 extern string erros;
 extern bool temErro ;
 
