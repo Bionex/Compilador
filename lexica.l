@@ -8,13 +8,26 @@ ESPACO [ \t]
 DIGITO [0-9]
 LETRA [A-Za-z_]
 
+
 DELIM {ESPACO}+
 NUM {DIGITO}+
 REAL {NUM}+("."{NUM}+)?
 CHAR \'({LETRA}|{NUM})\'
 ID {LETRA}({LETRA}|{NUM})*
 
+%x SINGLE_STRING
+
 %%
+
+\"                          BEGIN(SINGLE_STRING);
+<SINGLE_STRING>{
+  \n                        yyerror("the string misses \" to termiate before newline");
+  <<EOF>>                   yyerror("the string misses \" to terminate before EOF");
+  ([^\\\"]|\\.)*            {yylval.traducao = yytext; return TK_STRING;}
+  \"                        BEGIN(INITIAL);
+  .                         ;
+}
+
 
 "\n"		{lineCount += 1;}
 
@@ -26,6 +39,7 @@ ID {LETRA}({LETRA}|{NUM})*
 "float"		{return TK_TIPO_FLOAT;}
 "char"		{return TK_TIPO_CHAR;}
 "bool"		{return TK_TIPO_BOOL;}
+"string"    {return TK_TIPO_STRING;}
 
 
 [(){}[\];:,\']	{ return *yytext; }

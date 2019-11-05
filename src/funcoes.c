@@ -42,6 +42,8 @@ string gerarLabel(){
 	
 }
 
+
+
 string gerarGotoLabel(){
 	return string("Label") + to_string(nGoto++);
 	
@@ -92,6 +94,8 @@ string declararVars(){
 	for(auto &x: temporarias){
 		if(x.second == "bool")
 			x.second = "BOOL";
+		else if(x.second == "string")
+			x.second = "STRING";
 		retorno = retorno + "\t" + x.second + " " +x.first + ";\n";
 	}
 	return retorno;
@@ -422,4 +426,8 @@ bool operator<(KeyTriple const & lhs, KeyTriple const & rhs) {
 	*/
     // Alternatively, if you can use C++11 but don't want a tuple for a key
     return std::tie(get<0>(lhs), get<1>(lhs), get<2>(lhs) ) < std::tie(get<0>(rhs), get<1>(rhs), get<2>(rhs));
+}
+
+string gerarLabelStringSize(string label){
+	return "SIZE_" + label;
 }

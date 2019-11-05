@@ -26,10 +26,10 @@ using namespace std;
 %token TK_NUM TK_REAL TK_CHAR
 %token TK_MAIN TK_ID
 %token TK_FIM TK_ERROR
-%token TK_TIPO_FLOAT TK_TIPO_INT TK_TIPO_CHAR TK_TIPO_BOOL
+%token TK_TIPO_FLOAT TK_TIPO_INT TK_TIPO_CHAR TK_TIPO_BOOL TK_TIPO_STRING
 %token TK_EQ TK_NOT_EQ TK_BIG_EQ TK_SMALL_EQ
 %token TK_AND TK_OR TK_NOT
-%token TK_LOGICO
+%token TK_LOGICO TK_STRING
 %token TK_IF TK_WHILE TK_FOR TK_ELSE TK_SWITCH TK_CASE TK_DEFAULT TK_DO 
 %token TK_BREAK TK_CONTINUE TK_ALL
 %token TK_PRINT TK_SCAN
@@ -37,7 +37,6 @@ using namespace std;
 
 %start S
 
-%left TK_IF
 %left TK_AND
 %left TK_OR
 %left TK_NOT
@@ -46,7 +45,10 @@ using namespace std;
 %left '+' '-'
 %left '*' '/'
 %left '(' ')'
-%left UMINUS
+%right UMINUS
+
+%nonassoc NO_ELSE
+%nonassoc TK_ELSE
 
 
 
@@ -60,7 +62,7 @@ S:			TK_TIPO_INT TK_MAIN '(' ')' BLOCO
 					cout << erros;
 				}
 				else
-					cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\n\n#define BOOL int\n#define True 1\n#define False 0\n\nint main(void)\n{\n" << declararVars() << "\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
+					cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\n\n#define BOOL int\n#define True 1\n#define False 0\n#define STRING char*\n\nint main(void)\n{\n" << declararVars() << "\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
 			}
 			;
 
@@ -95,7 +97,23 @@ COMANDO:	E PTO_VIRGULA { $$.traducao = $1.traducao; }
 			| BREAK PTO_VIRGULA {$$.traducao = $1.traducao;}
 			| CONTINUE PTO_VIRGULA{ $$.traducao = $1.traducao;}
 			| SCAN PTO_VIRGULA {$$.traducao = $1.traducao;}
-			| PTO_VIRGULA
+			| PTO_VIRGULA {$$.traducao = "";}
+			| BLOCO {$$.traducao = $1.traducao;}
+			;
+
+COMANDOALT:	E PTO_VIRGULA { $$.traducao = $1.traducao; }
+			| ATRIBUICAO PTO_VIRGULA { $$.traducao =$1.traducao;}
+			| DECLARACAO PTO_VIRGULA {$$.traducao = $1.traducao;}
+			| TK_PRINT '('FN_ARGS')' PTO_VIRGULA {$$.traducao = $3.traducao + "\t" + "std::cout <<" + $3.label + "<<std::endl;\n";}
+			| IF {$$.traducao = $1.traducao;}
+			/*| WHILE { $$.traducao = $1.traducao;}
+			| DO PTO_VIRGULA{$$.traducao = $1.traducao;}*/
+			| SWITCH { $$.traducao = $1.traducao;}
+			| LOOP_AUX LOOP {$$.traducao = $2.traducao;}
+			| BREAK PTO_VIRGULA {$$.traducao = $1.traducao;}
+			| CONTINUE PTO_VIRGULA{ $$.traducao = $1.traducao;}
+			| SCAN PTO_VIRGULA {$$.traducao = $1.traducao;}
+			| PTO_VIRGULA {$$.traducao = "";}
 			;
 
 PTO_VIRGULA: ';' {}
@@ -168,7 +186,7 @@ LOOP_AUX:	TK_DO
 				tabelaVariavel tabela;
 				pushEscopo(pilhaContexto, tabela);
 			}
-			| TK_WHILE 
+			| TK_WHILE '('
 			{ 
 				Loop loopinho= createLoop("while") ; 
 				pushLoop(loopinho, loops);
@@ -317,12 +335,12 @@ MULTI_E: 	MULTI_E ',' E
 
 
 
-IF:			TK_IF '(' E ')' BLOMANDO
+IF:			TK_IF '(' E ')' BLOMANDO2 %prec NO_ELSE
 			{
 				string endLabel = gerarGotoLabel();
 				$$.traducao = $3.traducao + "\t" + $3.label + " = !" + $3.label + ";\n" + "\tif( " + $3.label + " ) goto " + endLabel + ";\n" + $5.traducao + "\t" + endLabel + ":\n"; 
 			}
-			| TK_IF '(' E ')' BLOMANDO TK_ELSE BLOMANDO
+			| TK_IF '(' E ')' BLOMANDO2 TK_ELSE BLOMANDO2
 			{
 				string midLabel = gerarGotoLabel();
 				string endLabel = gerarGotoLabel();
@@ -331,15 +349,18 @@ IF:			TK_IF '(' E ')' BLOMANDO
 			;
 
 /* ----------------JUNCAO DE BLOCO COM COMANDO ------------------------*/
-BLOMANDO: '{' COMANDOS '}' {$$.traducao = $2.traducao;}
-		| COMANDO
-		;
+BLOMANDO:	'{' COMANDOS '}' {$$.traducao = $2.traducao;}
+			| COMANDOALT
+			;
 
+BLOMANDO2: 	BLOCO {$$.traducao = $1.traducao;}
+			| COMANDOALT{ $$.traducao = $1.traducao;}
 
-WHILE:		'(' E ')' BLOMANDO 
+WHILE:		E ')' BLOMANDO // removido o abre parenteses dessa regra devido a conflito de shift/reduce com a regra '(' E ')'
+			// parenteses movido a para a contra-parte em LOOP_AUX;
 			{
 				Loop loopinho = getLoop(loops);
-				$$.traducao = "\t"+ loopinho.startLabel + ":\n" +$2.traducao + "\t" + $2.label + " = !" + $2.label + ";\n" + "\tif( " + $2.label + " ) goto " + loopinho.endLabel + ";\n" + $4.traducao + "\tgoto "+ loopinho.startLabel + ";\n\t" + loopinho.endLabel + ":\n";
+				$$.traducao = "\t"+ loopinho.startLabel + ":\n" +$1.traducao + "\t" + $1.label + " = !" + $1.label + ";\n" + "\tif( " + $1.label + " ) goto " + loopinho.endLabel + ";\n" + $3.traducao + "\tgoto "+ loopinho.startLabel + ";\n\t" + loopinho.endLabel + ":\n";
 				popLoop(loops);
 				//cout<< "teste2" << endl; 
 			}
@@ -556,6 +577,18 @@ E:			E '+' E
 				$$.traducao = "\t" + $$.label + " = " + $1.traducao + ";\n";
 
 			}
+			| TK_STRING{
+				$$.traducao = "";
+				$$.label = gerarLabel();
+				inserirTemporaria($$.label, "string");
+				string labelTamanho = gerarLabelStringSize($$.label);
+				inserirTemporaria(labelTamanho, "int");
+				$$.tipo = "string";
+				$$.traducao += "\t" + labelTamanho +  " = " + to_string($1.traducao.size() + 1) + ";\n";
+				$$.traducao += "\t" + $$.label + " = (STRING) malloc(sizeof(char) * " + labelTamanho  + ");\n";
+				$$.traducao += "\tstrcpy( " + $$.label + ", \"" + $1.traducao + "\" );\n"; 
+				//cout <<"a string encontrada foi " +  $1.traducao << endl;
+			}
 			;
 
 
@@ -563,6 +596,7 @@ TIPO:		TK_TIPO_BOOL	{$$.traducao = "bool"; tipoDaDeclaracao = "bool";}
 			| TK_TIPO_INT	{$$.traducao = "int"; tipoDaDeclaracao = "int";}
 			| TK_TIPO_CHAR	{$$.traducao = "char"; tipoDaDeclaracao = "char";}
 			| TK_TIPO_FLOAT	{$$.traducao = "float"; tipoDaDeclaracao = "float";}
+			| TK_TIPO_STRING {$$.traducao = "string"; tipoDaDeclaracao = "string";}
 //}
 %%
 
