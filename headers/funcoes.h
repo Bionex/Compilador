@@ -64,6 +64,9 @@ caracteristicas buscarVariavelTopo(string);
 atributos caracteristicasToAtributos(caracteristicas);
 bool operator<(KeyTriple, KeyTriple);
 string gerarLabelStringSize(string);
+int contarTamanhoString(string);
+atributos leituraString(caracteristicas);
+atributos codigoAtribuicao(atributos,atributos);
 
 extern int nTemp;
 extern int nUser;

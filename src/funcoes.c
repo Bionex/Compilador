@@ -203,6 +203,9 @@ void inicializarTabelaCoercao(){
 	tabelaCoercao[genKey("char" , "!=", "char")] = {"bool","char"};
 	tabelaCoercao[genKey("bool" , "!=", "bool")] = {"bool","bool"};
 
+	tabelaCoercao[genKey("string" , "+" , "string")] = {"string", "string"};
+
+
 
 
 
@@ -221,34 +224,53 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 	struct coercao coercaoToken = verificarCoercao($1.tipo, operador, $3.tipo);
 
 	if(coercaoToken.retornoTipo != "NULL"){
-
+		
 		$$.label = gerarLabel();
 		inserirTemporaria($$.label , coercaoToken.retornoTipo);
 
+		if(coercaoToken.retornoTipo != "string")
+		{
+			$$.tipo = coercaoToken.retornoTipo;
+			if($1.tipo == coercaoToken.conversaoTipo && $3.tipo == coercaoToken.conversaoTipo)
+				$$.traducao = $1.traducao + $3.traducao  + "\t" + $$.label +" = " + $1.label + " " + operador + " " + $3.label +";\n";
 
-		$$.tipo = coercaoToken.retornoTipo;
-		if($1.tipo == coercaoToken.conversaoTipo && $3.tipo == coercaoToken.conversaoTipo)
-			$$.traducao = $1.traducao + $3.traducao  + "\t" + $$.label +" = " + $1.label + " " + operador + " " + $3.label +";\n";
+			else{
 
-		else{
+				string coercaoLabel = gerarLabel();
+				inserirTemporaria(coercaoLabel, coercaoToken.conversaoTipo);
 
-			string coercaoLabel = gerarLabel();
-			inserirTemporaria(coercaoLabel, coercaoToken.conversaoTipo);
+				string coercao = "\t"+ coercaoLabel + " = " "("+ coercaoToken.conversaoTipo +") ",resultado;
 
-			string coercao = "\t"+ coercaoLabel + " = " "("+ coercaoToken.conversaoTipo +") ",resultado;
+				if($1.tipo != coercaoToken.conversaoTipo){
 
-			if($1.tipo != coercaoToken.conversaoTipo){
+					coercao += $1.label;
+					resultado = coercaoLabel + " " + operador + " " + $3.label;
+				}
+				else if($3.tipo != coercaoToken.conversaoTipo){
 
-				coercao += $1.label;
-				resultado = coercaoLabel + " " + operador + " " + $3.label;
+					coercao += $3.label;
+					resultado = $1.label + " " + operador + " " + coercaoLabel;
+				}
+				coercao += ";\n";
+				$$.traducao = $1.traducao + $3.traducao + coercao +"\t" +  $$.label + " = "  + resultado + ";\n";
 			}
-			else if($3.tipo != coercaoToken.conversaoTipo){
-
-				coercao += $3.label;
-				resultado = $1.label + " " + operador + " " + coercaoLabel;
+		}
+		else
+		{
+			if(operador == "+")
+			{
+				string sizeA = gerarLabelStringSize($1.label), sizeB = gerarLabelStringSize($3.label);
+				string sizeFinal = gerarLabelStringSize($$.label);
+				inserirTemporaria(sizeFinal, "int");
+				$$.tipo = coercaoToken.retornoTipo;
+				$$.traducao = $1.traducao + $3.traducao;
+				$$.traducao += "\t" + sizeFinal + " = " + sizeA + " + " + sizeB + ";\n";
+				$$.traducao += "\t" + sizeFinal + " = " + sizeFinal + " - 1;\n";
+				$$.traducao += "\t" + $$.label + " = (STRING) malloc(sizeof(char) * " + sizeFinal + " );\n";
+				$$.traducao += "\t" + $$.label + "[0] = '\\0';\n";  
+				$$.traducao += "\tstrcat("+ $$.label + ", "+ $1.label +");\n";
+				$$.traducao += "\tstrcat("+ $$.label + ", "+ $3.label +");\n";
 			}
-			coercao += ";\n";
-			$$.traducao = $1.traducao + $3.traducao + coercao +"\t" +  $$.label + " = "  + resultado + ";\n";
 		}
 	}
 	else{
@@ -307,7 +329,16 @@ atributos declaracaoVariavelAtribuicao(string var, string tipo, atributos expres
 			varCaracteristicas.nomeVar = var;
 			addVar2Escopo(pilhaContexto,varCaracteristicas);
 			temporarias[varCaracteristicas.localVar] = tipo;
-			$$.traducao += expressao.traducao +"\t" + varCaracteristicas.localVar + " = " + expressao.label + ";\n";
+			if(tipo != "string")
+				$$.traducao += expressao.traducao +"\t" + varCaracteristicas.localVar + " = " + expressao.label + ";\n";
+			else{
+				string labelTamanhoTemp = gerarLabelStringSize(expressao.label);
+				string labelTamanhoNovaVar = gerarLabelStringSize(varCaracteristicas.localVar);
+				inserirTemporaria(labelTamanhoNovaVar, "int");
+				$$.traducao += expressao.traducao +"\t" + varCaracteristicas.localVar + " = " + expressao.label + ";\n";
+				$$.traducao += "\t" + labelTamanhoNovaVar + " = " + labelTamanhoTemp + ";\n"; 
+			}
+
 		}
 	}
 	else{
@@ -430,4 +461,72 @@ bool operator<(KeyTriple const & lhs, KeyTriple const & rhs) {
 
 string gerarLabelStringSize(string label){
 	return "SIZE_" + label;
+}
+
+int contarTamanhoString(string palavra){
+	int cont = 0;
+	
+	for(int i = 0; i < palavra.size(); i++){
+		if(palavra.at(i) != '\\')
+			cont++;
+	}
+
+	return cont;
+}
+
+atributos leituraString(caracteristicas variavel){
+	atributos $$;
+	string label = gerarLabel();
+	string gotoLabel = gerarGotoLabel();
+	string endGotoLabel = gerarGotoLabel();
+	string tamanhoLabel = gerarLabelStringSize(variavel.localVar);
+	inserirTemporaria(tamanhoLabel, "int");
+	inserirTemporaria(label, "string");
+	$$.traducao = "\t" + label + " = (STRING) malloc(sizeof(char) * 2000);\n";
+	$$.traducao += "\tstd::cin >>" + label + ";\n";
+	$$.traducao += "\t" + tamanhoLabel + " = 0;\n";
+	$$.traducao +="\t" + gotoLabel + ":\n";
+	string labelTMP1 = gerarLabel();
+	string labelTMP2 = gerarLabel();
+	inserirTemporaria(labelTMP1, "char");
+	inserirTemporaria(labelTMP2, "char");
+	atributos a = {labelTMP1,"\t" + labelTMP1 + " = " + label +"[ " + tamanhoLabel + " ];\n", "char"};
+	atributos b = {labelTMP2,"\t" + labelTMP2 + " = '\\0';\n", "char" };
+
+	atributos retorno = conversaoImplicita(a,b, "!=");
+
+	$$.traducao += retorno.traducao + "\t" + retorno.label + " = !"+ retorno.label + ";\n";
+	$$.traducao += "\tif( " + retorno.label + " ) goto " + endGotoLabel + ";\n";
+	$$.traducao += "\t" + tamanhoLabel + " = " + tamanhoLabel + "+ 1;\n";
+	$$.traducao += "\t goto " + gotoLabel + ";\n";
+	$$.traducao += "\t" + endGotoLabel + ":\n";
+	$$.traducao += "\t" + tamanhoLabel + " = " + tamanhoLabel + "+ 1;\n";
+	$$.traducao += "\t" + variavel.localVar + " = (STRING) malloc(sizeof(char) * " + tamanhoLabel + " );\n";
+	$$.traducao += "\tstrcpy( " + variavel.localVar + ", " + label + " );\n";
+	$$.traducao += "\tfree( "+ label + ");\n";
+
+	return $$;
+}
+
+atributos codigoAtribuicao(atributos $1, atributos $3){
+	
+	caracteristicas variavel = buscarVariavel($1.label);
+	
+	if(variavel.tipo == $3.tipo){
+		$$.traducao = $3.traducao +  "\t" + variavel.localVar + " = " + $3.label + ";\n";
+	}
+	else{
+		struct coercao correcao = verificarCoercao(variavel.tipo, "=", $3.tipo);
+		if(correcao.retornoTipo != "NULL"){
+		
+	caracteristicas variavel = buscarVariavel($1.label);
+	
+	if(variavel.tipo == $3.tipo){
+			$$.traducao = $3.traducao +  "\t" + variavel.localVar + " = " + "(" + correcao.conversaoTipo + ")" + $3.label + ";\n";
+		}
+		else{
+			yyerror("a operacao = nao esta definida para " + variavel.tipo + " e " + $3.tipo);
+		}
+
+	}
 }

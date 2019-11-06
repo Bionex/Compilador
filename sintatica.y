@@ -357,7 +357,7 @@ BLOMANDO2: 	BLOCO {$$.traducao = $1.traducao;}
 			| COMANDOALT{ $$.traducao = $1.traducao;}
 
 WHILE:		E ')' BLOMANDO // removido o abre parenteses dessa regra devido a conflito de shift/reduce com a regra '(' E ')'
-			// parenteses movido a para a contra-parte em LOOP_AUX;
+			// parenteses movido para a contra-parte em LOOP_AUX;
 			{
 				Loop loopinho = getLoop(loops);
 				$$.traducao = "\t"+ loopinho.startLabel + ":\n" +$1.traducao + "\t" + $1.label + " = !" + $1.label + ";\n" + "\tif( " + $1.label + " ) goto " + loopinho.endLabel + ";\n" + $3.traducao + "\tgoto "+ loopinho.startLabel + ";\n\t" + loopinho.endLabel + ":\n";
@@ -384,7 +384,7 @@ FN_ARGS_AUX: ',' E  FN_ARGS_AUX
 
 SCAN:		TK_SCAN '(' SCAN_ARGS ')' 
 			{
-				$$.traducao = "\tstd::cin" + $3.traducao + ";\n";
+				$$.traducao = $3.traducao;
 			}
 			;
 
@@ -393,38 +393,40 @@ SCAN_ARGS:	TIPO ':' TK_ID ',' SCAN_ARGS
 				caracteristicas variavel = buscarVariavel($3.label);
 				if($1.traducao != variavel.tipo)
 					yyerror("A variavel \""+variavel.nomeVar + "\" eh do tipo " + variavel.tipo + " e o tipo requisitado eh "+ $1.traducao);
-				
-				$$.traducao = " >> " + variavel.localVar + $5.traducao;
+				if(variavel.tipo != "string")
+				{
+					$$.traducao = "\tcin >> " + variavel.localVar + ";\n" + $5.traducao;
+				}
+				else{
+					$$ = leituraString(variavel);
+					$$.traducao += $5.traducao;
+
+				}
 
 			}
 			| TIPO ':' TK_ID
 			{
+
 				caracteristicas variavel = buscarVariavel($3.label);
 				if($1.traducao != variavel.tipo)
 					yyerror("A variavel \""+variavel.nomeVar + "\" eh do tipo " + variavel.tipo + " e o tipo requisitado eh "+ $1.traducao);
-				
-				$$.traducao = " >> " + variavel.localVar;
+				if($1.traducao != "string")
+				{
+					$$.traducao = "\tcin >> " + variavel.localVar + ";\n";
+				}
+				else{
+					$$ = leituraString(variavel);
+				}
+			}
+			| error ':' 
+			{
+				yyerror("tipo do scan nao declarado");
 			}
 			;
 
 ATRIBUICAO:	TK_ID '=' E 
 			{
-
-				caracteristicas variavel = buscarVariavel($1.label);
-				
-				if(variavel.tipo == $3.tipo){
-					$$.traducao = $3.traducao +  "\t" + variavel.localVar + " = " + $3.label + ";\n";
-				}
-				else{
-					struct coercao correcao = verificarCoercao(variavel.tipo, "=", $3.tipo);
-					if(correcao.retornoTipo != "NULL"){
-						$$.traducao = $3.traducao +  "\t" + variavel.localVar + " = " + "(" + correcao.conversaoTipo + ")" + $3.label + ";\n";
-					}
-					else{
-						yyerror("a operacao = nao esta definida para " + variavel.tipo + " e " + $3.tipo);
-					}
-
-				}
+				$$ = codigoAtribuicao($1, $3);
 			}
 			;
 
@@ -458,6 +460,7 @@ DECLARACAO_AUX:',' TK_ID DECLARACAO_AUX
 E:			E '+' E
 			{
 				$$ = conversaoImplicita($1, $3 , "+");
+				cout << "/*traducao = " + $$.traducao + "*/";
 			}
 			| E '-' E
 			{
@@ -584,7 +587,7 @@ E:			E '+' E
 				string labelTamanho = gerarLabelStringSize($$.label);
 				inserirTemporaria(labelTamanho, "int");
 				$$.tipo = "string";
-				$$.traducao += "\t" + labelTamanho +  " = " + to_string($1.traducao.size() + 1) + ";\n";
+				$$.traducao += "\t" + labelTamanho +  " = " + to_string(contarTamanhoString($1.traducao) + 1) + ";\n";
 				$$.traducao += "\t" + $$.label + " = (STRING) malloc(sizeof(char) * " + labelTamanho  + ");\n";
 				$$.traducao += "\tstrcpy( " + $$.label + ", \"" + $1.traducao + "\" );\n"; 
 				//cout <<"a string encontrada foi " +  $1.traducao << endl;
