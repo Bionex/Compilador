@@ -1,13 +1,16 @@
 int main()
 {
-	string a;
+	string a = "AA";
 
-	scan(string: a);
+	print(a);
 
 	string b = a;
 
-	a = "eae";
 	print(b);
-	print(a);
+
+	a = "ea e";
+	print(a, b);
+	
+
 }
 

@@ -439,6 +439,7 @@ DECLARACAO:	TIPO TK_ID DECLARACAO_AUX
 			| TIPO TK_ID '=' E DECLARACAO_AUX
 			{
 				$$ = declaracaoVariavelAtribuicao($2.label, $1.traducao, $4);
+				//cout<< "label aq" + $4.label;
 				$$.traducao += $5.traducao;
 			}
 			;
@@ -451,6 +452,7 @@ DECLARACAO_AUX:',' TK_ID DECLARACAO_AUX
 			| ',' TK_ID '=' E  DECLARACAO_AUX 
 			{
 				$$ = declaracaoVariavelAtribuicao($2.label, tipoDaDeclaracao, $4);
+				//cout<< "label aq" + $4.label;
 				$$.traducao += $5.traducao;
 			}
 			| /*vazio */ {$$.traducao = "";}
