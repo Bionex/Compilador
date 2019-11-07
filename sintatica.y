@@ -85,10 +85,8 @@ COMANDOS:	COMANDO COMANDOS {$$.traducao = $1.traducao + $2.traducao;}
 			| {  $$.traducao = "" ;}
 			;
 
-COMANDO:	E PTO_VIRGULA { $$.traducao = $1.traducao; }
-			| ATRIBUICAO PTO_VIRGULA { $$.traducao =$1.traducao;}
+COMANDO:	STATEMENT PTO_VIRGULA {$$.traducao = $1.traducao;}
 			| DECLARACAO PTO_VIRGULA {$$.traducao = $1.traducao;}
-			| TK_PRINT '('FN_ARGS')' PTO_VIRGULA {$$.traducao = $3.traducao + "\t" + "std::cout <<" + $3.label + "<<std::endl;\n";}
 			| IF {$$.traducao = $1.traducao;}
 			/*| WHILE { $$.traducao = $1.traducao;}
 			| DO PTO_VIRGULA{$$.traducao = $1.traducao;}*/
@@ -96,15 +94,20 @@ COMANDO:	E PTO_VIRGULA { $$.traducao = $1.traducao; }
 			| LOOP_AUX LOOP {$$.traducao = $2.traducao;}
 			| BREAK PTO_VIRGULA {$$.traducao = $1.traducao;}
 			| CONTINUE PTO_VIRGULA{ $$.traducao = $1.traducao;}
-			| SCAN PTO_VIRGULA {$$.traducao = $1.traducao;}
 			| PTO_VIRGULA {$$.traducao = "";}
 			| BLOCO {$$.traducao = $1.traducao;}
+			;
+
+STATEMENT: 	E {$$.traducao = $1.traducao;}
+			| ATRIBUICAO {$$.traducao = $1.traducao;}
+			| PRINT  {$$.traducao = $1.traducao;}
+			| SCAN {$$.traducao = $1.traducao;}
 			;
 
 COMANDOALT:	E PTO_VIRGULA { $$.traducao = $1.traducao; }
 			| ATRIBUICAO PTO_VIRGULA { $$.traducao =$1.traducao;}
 			| DECLARACAO PTO_VIRGULA {$$.traducao = $1.traducao;}
-			| TK_PRINT '('FN_ARGS')' PTO_VIRGULA {$$.traducao = $3.traducao + "\t" + "std::cout <<" + $3.label + "<<std::endl;\n";}
+			| PRINT PTO_VIRGULA {$$.traducao = $1.traducao;}
 			| IF {$$.traducao = $1.traducao;}
 			/*| WHILE { $$.traducao = $1.traducao;}
 			| DO PTO_VIRGULA{$$.traducao = $1.traducao;}*/
@@ -216,12 +219,12 @@ FOR: 		'(' FOR_ARG1 ';' FOR_ARG2 ';' FOR_ARG3 ')' BLOMANDO
 			;
 
 FOR_ARG1:	DECLARACAO {$$.traducao = $1.traducao;}
-			| ATRIBUICAO ',' FOR_ARG1_AUX {$$.traducao = $1.traducao + $3.traducao;}
+			| STATEMENT ',' FOR_ARG1_AUX {$$.traducao = $1.traducao + $3.traducao;}
 			| /* VAZIO */ { $$.traducao = "";}
 			;
 
-FOR_ARG1_AUX: ATRIBUICAO ',' FOR_ARG1_AUX {$$.traducao = $1.traducao + $3.traducao;}
-			| ATRIBUICAO {$$.traducao = $1.traducao;}
+FOR_ARG1_AUX: STATEMENT ',' FOR_ARG1_AUX {$$.traducao = $1.traducao + $3.traducao;}
+			| STATEMENT {$$.traducao = $1.traducao;}
 			;
 
 FOR_ARG2:	/* vazio */
@@ -230,19 +233,19 @@ FOR_ARG2:	/* vazio */
 				inserirTemporaria($$.label, "bool");
 				$$.traducao = "\t" + $$.label + " = True;\n";
 			}
-			| E 
+			| STATEMENT 
 			{
 				$$.traducao = $1.traducao;
 			}
-			| E ',' FOR_ARG2_AUX 
+			| STATEMENT ',' FOR_ARG2_AUX 
 			{
 				$$.traducao = $1.traducao + $3.traducao;
 				$$.label = $3.label;
 			}
 			;
 
-FOR_ARG2_AUX: E {$$.label = $1.label; $$.traducao = $1.traducao;}
-			| E ',' FOR_ARG2_AUX {$$.traducao = $1.traducao + $3.traducao; $$.label = $3.label;}
+FOR_ARG2_AUX: STATEMENT {$$.label = $1.label; $$.traducao = $1.traducao;}
+			| STATEMENT ',' FOR_ARG2_AUX {$$.traducao = $1.traducao + $3.traducao; $$.label = $3.label;}
 			;
 
 FOR_ARG3:	E {$$.traducao = $1.traducao;}
@@ -310,6 +313,7 @@ caseRecursao: /*vazio */{ $$.traducao = "";}
 			}
 			;
 
+
 MULTI_E: 	MULTI_E ',' E  
 			{
 				SwitchLabels topoDaPilha = gambiarraSwitch.top();
@@ -366,6 +370,8 @@ WHILE:		E ')' BLOMANDO // removido o abre parenteses dessa regra devido a confli
 			}
 			;
 
+PRINT: 		TK_PRINT '('FN_ARGS')' {$$.traducao = $3.traducao + "\t" + "std::cout <<" + $3.label + "<<std::endl;\n";}
+			;
 
 FN_ARGS:	E FN_ARGS_AUX 
 			{
@@ -462,7 +468,7 @@ DECLARACAO_AUX:',' TK_ID DECLARACAO_AUX
 E:			E '+' E
 			{
 				$$ = conversaoImplicita($1, $3 , "+");
-				cout << "/*traducao = " + $$.traducao + "*/";
+				//cout << "/*traducao = " + $$.traducao + "*/";
 			}
 			| E '-' E
 			{

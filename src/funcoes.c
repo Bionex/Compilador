@@ -204,6 +204,12 @@ void inicializarTabelaCoercao(){
 	tabelaCoercao[genKey("bool" , "!=", "bool")] = {"bool","bool"};
 
 	tabelaCoercao[genKey("string" , "+" , "string")] = {"string", "string"};
+	tabelaCoercao[genKey("string", "==", "string")] = {"bool", "string"};
+	tabelaCoercao[genKey("string", "!=", "string")] = {"bool", "string"};
+	tabelaCoercao[genKey("string", "<", "string")] = {"bool", "string"};
+	tabelaCoercao[genKey("string", ">", "string")] = {"bool", "string"};
+	tabelaCoercao[genKey("string", "<=", "string")] = {"bool", "string"};
+	tabelaCoercao[genKey("string", ">=", "string")] = {"bool", "string"};
 
 
 
@@ -228,7 +234,7 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 		$$.label = gerarLabel();
 		inserirTemporaria($$.label , coercaoToken.retornoTipo);
 
-		if(coercaoToken.retornoTipo != "string")
+		if(coercaoToken.conversaoTipo != "string")
 		{
 			$$.tipo = coercaoToken.retornoTipo;
 			if($1.tipo == coercaoToken.conversaoTipo && $3.tipo == coercaoToken.conversaoTipo)
@@ -257,12 +263,12 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 		}
 		else
 		{
+			$$.tipo = coercaoToken.retornoTipo;
 			if(operador == "+")
 			{
 				string sizeA = gerarLabelStringSize($1.label), sizeB = gerarLabelStringSize($3.label);
 				string sizeFinal = gerarLabelStringSize($$.label);
 				inserirTemporaria(sizeFinal, "int");
-				$$.tipo = coercaoToken.retornoTipo;
 				$$.traducao = $1.traducao + $3.traducao;
 				$$.traducao += "\t" + sizeFinal + " = " + sizeA + " + " + sizeB + ";\n";
 				$$.traducao += "\t" + sizeFinal + " = " + sizeFinal + " - 1;\n";
@@ -270,6 +276,84 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 				$$.traducao += "\t" + $$.label + "[0] = '\\0';\n";  
 				$$.traducao += "\tstrcat("+ $$.label + ", "+ $1.label +");\n";
 				$$.traducao += "\tstrcat("+ $$.label + ", "+ $3.label +");\n";
+			}
+			else if(operador == "=="){
+				$$.traducao = $1.traducao + $3.traducao;
+				string labelTMPSTRCMP = gerarLabel();
+				inserirTemporaria(labelTMPSTRCMP, "int");
+				$$.traducao += "\t" + labelTMPSTRCMP + " = strcmp(" + $1.label+ ", " + $3.label + " );\n";
+				string labelTMPBOOL1 = gerarLabel();
+				inserirTemporaria(labelTMPBOOL1, "bool");
+				string labelTMPInt = gerarLabel();
+				inserirTemporaria(labelTMPInt, "int");
+				$$.traducao += "\t" + labelTMPInt + " = 0;\n";
+				$$.traducao += "\t" + labelTMPBOOL1 + " = " + labelTMPSTRCMP + " == " +  labelTMPInt + ";\n";
+				$$.label = labelTMPBOOL1;
+			}
+			else if(operador == "!="){
+				$$.traducao = $1.traducao + $3.traducao;
+				string labelTMPSTRCMP = gerarLabel();
+				inserirTemporaria(labelTMPSTRCMP, "int");
+				$$.traducao += "\t" + labelTMPSTRCMP + " = strcmp(" + $1.label+ ", " + $3.label + " );\n";
+				string labelTMPBOOL1 = gerarLabel();
+				inserirTemporaria(labelTMPBOOL1, "bool");
+				string labelTMPInt = gerarLabel();
+				inserirTemporaria(labelTMPInt, "int");
+				$$.traducao += "\t" + labelTMPInt + " = 0;\n";
+				$$.traducao += "\t" + labelTMPBOOL1 + " = " + labelTMPSTRCMP + " != " +  labelTMPInt + ";\n";
+				$$.label = labelTMPBOOL1;
+			}
+			else if(operador == "<"){
+				$$.traducao = $1.traducao + $3.traducao;
+				string labelTMPSTRCMP = gerarLabel();
+				inserirTemporaria(labelTMPSTRCMP, "int");
+				$$.traducao += "\t" + labelTMPSTRCMP + " = strcmp(" + $1.label+ ", " + $3.label + " );\n";
+				string labelTMPBOOL1 = gerarLabel();
+				inserirTemporaria(labelTMPBOOL1, "bool");
+				string labelTMPInt = gerarLabel();
+				inserirTemporaria(labelTMPInt, "int");
+				$$.traducao += "\t" + labelTMPInt + " = -1;\n";
+				$$.traducao += "\t" + labelTMPBOOL1 + " = " + labelTMPSTRCMP + " == " +  labelTMPInt + ";\n";
+				$$.label = labelTMPBOOL1;
+			}
+			else if(operador == ">"){
+				$$.traducao = $1.traducao + $3.traducao;
+				string labelTMPSTRCMP = gerarLabel();
+				inserirTemporaria(labelTMPSTRCMP, "int");
+				$$.traducao += "\t" + labelTMPSTRCMP + " = strcmp(" + $1.label+ ", " + $3.label + " );\n";
+				string labelTMPBOOL1 = gerarLabel();
+				inserirTemporaria(labelTMPBOOL1, "bool");
+				string labelTMPInt = gerarLabel();
+				inserirTemporaria(labelTMPInt, "int");
+				$$.traducao += "\t" + labelTMPInt + " = 1;\n";
+				$$.traducao += "\t" + labelTMPBOOL1 + " = " + labelTMPSTRCMP + " == " +  labelTMPInt + ";\n";
+				$$.label = labelTMPBOOL1;
+			}
+			else if(operador == ">="){
+				$$.traducao = $1.traducao + $3.traducao;
+				string labelTMPSTRCMP = gerarLabel();
+				inserirTemporaria(labelTMPSTRCMP, "int");
+				$$.traducao += "\t" + labelTMPSTRCMP + " = strcmp(" + $1.label+ ", " + $3.label + " );\n";
+				string labelTMPBOOL1 = gerarLabel();
+				inserirTemporaria(labelTMPBOOL1, "bool");
+				string labelTMPInt = gerarLabel();
+				inserirTemporaria(labelTMPInt, "int");
+				$$.traducao += "\t" + labelTMPInt + " = -1;\n";
+				$$.traducao += "\t" + labelTMPBOOL1 + " = " + labelTMPSTRCMP + " != " +  labelTMPInt + ";\n";
+				$$.label = labelTMPBOOL1;
+			}
+			else if(operador == "<="){
+				$$.traducao = $1.traducao + $3.traducao;
+				string labelTMPSTRCMP = gerarLabel();
+				inserirTemporaria(labelTMPSTRCMP, "int");
+				$$.traducao += "\t" + labelTMPSTRCMP + " = strcmp(" + $1.label+ ", " + $3.label + " );\n";
+				string labelTMPBOOL1 = gerarLabel();
+				inserirTemporaria(labelTMPBOOL1, "bool");
+				string labelTMPInt = gerarLabel();
+				inserirTemporaria(labelTMPInt, "int");
+				$$.traducao += "\t" + labelTMPInt + " = 1;\n";
+				$$.traducao += "\t" + labelTMPBOOL1 + " = " + labelTMPSTRCMP + " != " +  labelTMPInt + ";\n";
+				$$.label = labelTMPBOOL1;
 			}
 		}
 	}
@@ -467,10 +551,40 @@ string gerarLabelStringSize(string label){
 
 int contarTamanhoString(string palavra){
 	int cont = 0;
-	
+	bool flag = 1;
+	//std::cout << "palavra = " + palavra << std::endl;
+	// abcd\\1;
 	for(int i = 0; i < palavra.size(); i++){
-		if(palavra.at(i) != '\\')
-			cont++;
+		char c = palavra.at(i);
+		//cout << "i = "<< i << endl;
+		//cout << "char = " << c <<", flag = " <<flag << endl;
+		if(flag)
+		{
+			if(c != '\\' ){
+				//cout << "if 1\n";
+				cont++;
+			}
+			else
+			{
+				//cout << "else 1\n";
+				flag = 0;
+			}
+		}
+		else{
+			if(c == 'a' || c == 'b' || c == 'e' || c == 'f' || c == 'n' || c == 'r' \
+			 	|| c == 't' || c == 'v' || c == '\\' || c == '\'' || c == '\"' || c == '\?')
+			{
+				//cout << "if 2\n";
+				cont++;
+				flag = 1;
+			}
+			else{
+				//cout << "else 2\n";
+				yyerror("string com \\ sem caracter de escape adequado" );
+
+			}
+		}
+		
 	}
 
 	return cont;
@@ -546,7 +660,7 @@ atributos codigoAtribuicao(atributos $1, atributos $3){
 			inserirTemporaria(tamanhoDestino, "int");
 			$$.traducao += $3.traducao;
 			$$.traducao += "\t" + tamanhoDestino + " = " + tamanhoSource + ";\n";
-			$$.traducao += "\t" + variavel.localVar + " = (STRING) realloc( "+ variavel.localVar + ", sizeof(char) *" + tamanhoDestino + ");\n";
+			$$.traducao += "\t" + variavel.localVar + " = (STRING) realloc( "+ variavel.localVar + ", sizeof(char) * " + tamanhoDestino + ");\n";
 			$$.traducao += "\tstrcpy( "+ variavel.localVar  + ", " + $3.label + " );\n";
 		}
 	}
