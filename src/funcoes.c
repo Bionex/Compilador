@@ -31,6 +31,10 @@ std::map<KeyTriple, struct coercao> tabelaCoercao;
 
 void yyerror( string MSG )
 {
+	if(MSG == "syntax error"){
+		cout << "linha "<<lineCount<<": "<<MSG << endl;
+		exit(-1);
+	}
 	//cout << "erro -> " + MSG << endl;
 	erros += "linha " + to_string(lineCount) + ": " + MSG + "\n";
 	temErro = true;
@@ -97,6 +101,8 @@ string declararVars(){
 		else if(x.second == "string")
 			x.second = "STRING";
 		retorno = retorno + "\t" + x.second + " " +x.first + ";\n";
+		if(x.second == "STRING")
+			retorno += "\t" + x.first + " = NULL;\n";
 	}
 	return retorno;
 }
@@ -279,7 +285,7 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 				$$.traducao = $1.traducao + $3.traducao;
 				$$.traducao += "\t" + sizeFinal + " = " + sizeA + " + " + sizeB + ";\n";
 				$$.traducao += "\t" + sizeFinal + " = " + sizeFinal + " - 1;\n";
-				$$.traducao += "\t" + $$.label + " = (STRING) malloc(sizeof(char) * " + sizeFinal + " );\n";
+				$$.traducao += "\t" + $$.label + " = (STRING) realloc(" + $$.label  + ",sizeof(char) * " + sizeFinal + " );\n";
 				$$.traducao += "\t" + $$.label + "[0] = '\\0';\n";  
 				$$.traducao += "\tstrcat("+ $$.label + ", "+ $1.label +");\n";
 				$$.traducao += "\tstrcat("+ $$.label + ", "+ $3.label +");\n";
@@ -395,8 +401,6 @@ struct atributos declaracaoVariavel(string var, string tipo){
 				$$.traducao += "\t" + varCaracteristicas.localVar + " = 0.0;\n";
 			else if(tipo == "char")
 				$$.traducao += "\t" + varCaracteristicas.localVar + " = 'a';\n";
-			else if(tipo == "string")
-				$$.traducao += "\t" + varCaracteristicas.localVar + " = NULL";
 		}
 	}
 	else{
@@ -424,9 +428,6 @@ atributos declaracaoVariavelAtribuicao(string var, string tipo, atributos expres
 			varCaracteristicas.nomeVar = var;
 			addVar2Escopo(pilhaContexto,varCaracteristicas);
 			temporarias[varCaracteristicas.localVar] = tipo;
-			if(tipo == "string"){
-				$$.traducao += "\t" + varCaracteristicas.localVar + " = NULL;\n";
-			}
 			atributos auxiliarVariavel = {var, "" , tipo};
 			atributos attr = codigoAtribuicao(auxiliarVariavel,expressao);
 			$$.traducao += attr.traducao; 
@@ -605,7 +606,7 @@ atributos leituraString(caracteristicas variavel){
 	string tamanhoLabel = gerarLabelStringSize(variavel.localVar);
 	inserirTemporaria(tamanhoLabel, "int");
 	inserirTemporaria(label, "string");
-	$$.traducao = "\t" + label + " = (STRING) malloc(sizeof(char) * 2000);\n";
+	$$.traducao = "\t" + label + " = (STRING) realloc("+ label + ",sizeof(char) * 2000);\n";
 	$$.traducao += "\tstd::cin >>" + label + ";\n";
 	$$.traducao += "\t" + tamanhoLabel + " = 0;\n";
 	$$.traducao +="\t" + gotoLabel + ":\n";
@@ -624,7 +625,7 @@ atributos leituraString(caracteristicas variavel){
 	$$.traducao += "\tgoto " + gotoLabel + ";\n";
 	$$.traducao += "\t" + endGotoLabel + ":\n";
 	$$.traducao += "\t" + tamanhoLabel + " = " + tamanhoLabel + " + 1;\n";
-	$$.traducao += "\t" + variavel.localVar + " = (STRING) malloc(sizeof(char) * " + tamanhoLabel + " );\n";
+	$$.traducao += "\t" + variavel.localVar + " = (STRING) realloc("+ variavel.localVar +"sizeof(char) * " + tamanhoLabel + " );\n";
 	$$.traducao += "\tstrcpy( " + variavel.localVar + ", " + label + " );\n";
 	$$.traducao += "\tfree( "+ label + ");\n";
 
@@ -681,7 +682,7 @@ atributos converterStringInteiro(atributos variavel){
 	$$.traducao = "\t" + tmpI + " = 0;\n";
 	string chartmp = gerarLabel();
 	inserirTemporaria(chartmp, "char");
-	$$.traducao += "\t" + chartmp + " = " + variavel.localVar + "[0]\n";
+	$$.traducao += "\t" + chartmp + " = " + variavel.label + "[0]\n";
 
 	string minus = gerarLabel();
 	inserirTemporaria(minus, "bool");
@@ -700,7 +701,7 @@ atributos converterStringInteiro(atributos variavel){
 	inserirTemporaria(tmpBarra0, "char");
 	$$.traducao += "\t" + tmpBarra0 + " = '\0';\n";
 
-	string tmpComparaoWhile = gerarLabel();
+	string tmpComparacaoWhile = gerarLabel();
 	inserirTemporaria(tmpComparacaoWhile, "bool");
 	$$.traducao += "\t" + tmpComparacaoWhile + " = " + chartmp + " != " + tmpBarra0 + ";\n";
 	$$.traducao += "\t" + tmpComparacaoWhile + " = !" + tmpComparacaoWhile + ";\n";
@@ -709,7 +710,7 @@ atributos converterStringInteiro(atributos variavel){
 
 	string tmpIigual0 = gerarLabel();
 	inserirTemporaria(tmpIigual0, "int");
-	$$.traducao += "\t" tmpIigual0 + " = 0;\n";
+	$$.traducao += "\t" + tmpIigual0 + " = 0;\n";
 
 	string comparacaoI = gerarLabel();
 	inserirTemporaria(comparacaoI, "bool");
@@ -721,7 +722,7 @@ atributos converterStringInteiro(atributos variavel){
 
 	string comparacaoMenos = gerarLabel();
 	inserirTemporaria (comparacaoMenos, "bool");
-	$$.traducao += "\t" comparacaoMenos + " = " + chartmp + " == "+ charMenos + ";\n";
+	$$.traducao += "\t" + comparacaoMenos + " = " + chartmp + " == "+ charMenos + ";\n";
 
 	string comparacaoIf1 = gerarLabel();
 	inserirTemporaria(comparacaoIf1, "bool");

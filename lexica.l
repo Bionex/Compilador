@@ -7,13 +7,15 @@
 ESPACO [ \t]
 DIGITO [0-9]
 LETRA [A-Za-z_]
+CARACTER_ESCAPE \\(t|0|n|r|e|a|b|f|v|\\|\'|\"|\?)
 
 
 DELIM {ESPACO}+
 NUM {DIGITO}+
 REAL {NUM}+("."{NUM}+)?
-CHAR \'({LETRA}|{NUM})\'
+CHAR \'({LETRA}|{NUM}|{CARACTER_ESCAPE}|"-"|"+")\'
 ID {LETRA}({LETRA}|{NUM})*
+ESCAPE {CARACTER_ESCAPE}
 
 %x SINGLE_STRING
 
@@ -57,9 +59,9 @@ ID {LETRA}({LETRA}|{NUM})*
 "or"		{return TK_OR;}
 "not"		{return TK_NOT;}
 
-"True"		{yylval.traducao = "1"; return TK_LOGICO;}
+"True"		{yylval.traducao = "True"; return TK_LOGICO;}
 
-"False"		{yylval.traducao = "0"; return TK_LOGICO;}
+"False"		{yylval.traducao = "False"; return TK_LOGICO;}
 
 "print"		{return TK_PRINT;}
 "if"		{return TK_IF;}

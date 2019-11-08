@@ -558,6 +558,21 @@ E:			E '+' E
 				}
 			}
 
+			| TK_ID '[' E ']'
+			{
+				caracteristicas variavel = buscarVariavel($1.label);
+				if(variavel.localVar == "")
+					yyerror("Variavel "+ $1.label + " usada antes de ser declarada");
+				else if(variavel.tipo == "string"){
+					string temporaria = gerarLabel();
+					inserirTemporaria(temporaria, "char");
+					//cout << temporaria << endl;
+					$$.traducao = $3.traducao;
+					$$.traducao += "\t" + temporaria + " = "+ variavel.localVar + "[" + $3.label + "];\n";
+					$$.label = temporaria;
+					$$.tipo = "char";
+				}
+			}
 			//}
 			// ----------------------- FINAIS ---------------------------------
 
@@ -607,7 +622,7 @@ E:			E '+' E
 				inserirTemporaria(labelTamanho, "int");
 				$$.tipo = "string";
 				$$.traducao += "\t" + labelTamanho +  " = " + to_string(contarTamanhoString($1.traducao) + 1) + ";\n";
-				$$.traducao += "\t" + $$.label + " = (STRING) malloc(sizeof(char) * " + labelTamanho  + ");\n";
+				$$.traducao += "\t" + $$.label + " = (STRING) realloc(" + $$.label + ",sizeof(char) * " + labelTamanho  + ");\n";
 				$$.traducao += "\tstrcpy( " + $$.label + ", \"" + $1.traducao + "\" );\n"; 
 				//cout <<"a string encontrada foi " +  $1.traducao << endl;
 			}

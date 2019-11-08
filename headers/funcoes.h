@@ -67,6 +67,7 @@ string gerarLabelStringSize(string);
 int contarTamanhoString(string);
 atributos leituraString(caracteristicas);
 atributos codigoAtribuicao(atributos,atributos);
+atributos converterStringInteiro(atributos);
 
 extern int nTemp;
 extern int nUser;
