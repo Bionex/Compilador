@@ -8,14 +8,15 @@ ESPACO [ \t]
 DIGITO [0-9]
 LETRA [A-Za-z_]
 CARACTER_ESCAPE \\(t|0|n|r|e|a|b|f|v|\\|\'|\"|\?)
+START_COMENTARIO "//"
 
-
+COMMENT {START_COMENTARIO}.*
 DELIM {ESPACO}+
 NUM {DIGITO}+
 REAL {NUM}+("."{NUM}+)?
 CHAR \'({LETRA}|{NUM}|{CARACTER_ESCAPE}|"-"|"+")\'
 ID {LETRA}({LETRA}|{NUM})*
-ESCAPE {CARACTER_ESCAPE}
+
 
 %x SINGLE_STRING
 
@@ -23,12 +24,14 @@ ESCAPE {CARACTER_ESCAPE}
 
 \"                          BEGIN(SINGLE_STRING);
 <SINGLE_STRING>{
-  \n                        yyerror("the string misses \" to termiate before newline");
+  \n                        yyerror("the string misses \" to terminate before newline");
   <<EOF>>                   yyerror("the string misses \" to terminate before EOF");
   ([^\\\"]|\\.)*            {yylval.traducao = yytext; return TK_STRING;}
   \"                        BEGIN(INITIAL);
   .                         ;
 }
+
+{COMMENT}  {;}
 
 
 "\n"		{lineCount += 1;}
