@@ -31,7 +31,7 @@ std::map<KeyTriple, struct coercao> tabelaCoercao;
 
 void yyerror( string MSG )
 {
-
+	//cout << "erro -> " + MSG << endl;
 	erros += "linha " + to_string(lineCount) + ": " + MSG + "\n";
 	temErro = true;
 	return;
@@ -161,6 +161,10 @@ void inicializarTabelaCoercao(){
 	tabelaCoercao[genKey("int", "*", "float")] = {"float", "float"};
 	tabelaCoercao[genKey("int", "/", "float")] = {"float", "float"};
 
+	tabelaCoercao[genKey("char" , "+", "char")] = {"char", "char"};
+	tabelaCoercao[genKey("char" , "-", "char")] = {"char", "char"};
+
+
 	
 	
 
@@ -176,20 +180,23 @@ void inicializarTabelaCoercao(){
 	//tabelaCoercao[genKey("bool" , "<", "bool")] = "bool";
 	tabelaCoercao[genKey("int" , "<", "int")] = {"bool","int"};
 	tabelaCoercao[genKey("float" , "<", "float")] = {"bool","float"};
+	tabelaCoercao[genKey("char" , "<", "char")] = {"bool", "char"};
 	tabelaCoercao[genKey("int" , "<", "float")] = {"bool","float"};
 
 	tabelaCoercao[genKey("int" , ">", "int")] = {"bool","int"};
 	tabelaCoercao[genKey("float" , ">", "float")] = {"bool","float"};
+	tabelaCoercao[genKey("char" , ">", "char")] = {"bool", "char"};
 	tabelaCoercao[genKey("int" , ">", "float")] = {"bool","float"};
 
 	tabelaCoercao[genKey("int" , ">=", "int")] = {"bool","int"};
 	tabelaCoercao[genKey("float" , ">=", "float")] = {"bool","float"};
 	tabelaCoercao[genKey("int" , ">=", "float")] = {"bool","float"};
+	tabelaCoercao[genKey("char" , ">=", "char")] = {"bool", "char"};
 
 	tabelaCoercao[genKey("int" , "<=", "int")] = {"bool","int"};
 	tabelaCoercao[genKey("float" , "<=", "float")] = {"bool","float"};
 	tabelaCoercao[genKey("int" , "<=", "float")] = {"bool","float"};
-
+	tabelaCoercao[genKey("char" , "<=", "char")] = {"bool", "char"};
 
 	tabelaCoercao[genKey("int" , "==", "int")] = {"bool","int"};
 	tabelaCoercao[genKey("float" , "==", "float")] = {"bool","float"};
@@ -665,4 +672,72 @@ atributos codigoAtribuicao(atributos $1, atributos $3){
 		}
 	}
 	return $$;
+}
+
+atributos converterStringInteiro(atributos variavel){
+	atributos $$;
+	string tmpI = gerarLabel();
+	inserirTemporaria(tmpI , "int");
+	$$.traducao = "\t" + tmpI + " = 0;\n";
+	string chartmp = gerarLabel();
+	inserirTemporaria(chartmp, "char");
+	$$.traducao += "\t" + chartmp + " = " + variavel.localVar + "[0]\n";
+
+	string minus = gerarLabel();
+	inserirTemporaria(minus, "bool");
+	$$.traducao += "\t" + minus + " = False;\n";
+
+	string numero = gerarLabel();
+	inserirTemporaria(numero, "int");
+	$$.traducao += "\t" + numero + " = 0;\n";
+
+	string labelInicio = gerarGotoLabel();
+	$$.traducao += "\t" + labelInicio + ":\n";
+
+	string labelFim = gerarGotoLabel();
+
+	string tmpBarra0 = gerarLabel();
+	inserirTemporaria(tmpBarra0, "char");
+	$$.traducao += "\t" + tmpBarra0 + " = '\0';\n";
+
+	string tmpComparaoWhile = gerarLabel();
+	inserirTemporaria(tmpComparacaoWhile, "bool");
+	$$.traducao += "\t" + tmpComparacaoWhile + " = " + chartmp + " != " + tmpBarra0 + ";\n";
+	$$.traducao += "\t" + tmpComparacaoWhile + " = !" + tmpComparacaoWhile + ";\n";
+
+	$$.traducao += "\tif(" + tmpComparacaoWhile + ") goto " + labelFim + ";\n";
+
+	string tmpIigual0 = gerarLabel();
+	inserirTemporaria(tmpIigual0, "int");
+	$$.traducao += "\t" tmpIigual0 + " = 0;\n";
+
+	string comparacaoI = gerarLabel();
+	inserirTemporaria(comparacaoI, "bool");
+	$$.traducao += "\t" + comparacaoI+ " = " + tmpI + " == " + tmpIigual0 + ";\n";
+
+	string charMenos = gerarLabel();
+	inserirTemporaria(charMenos, "char");
+	$$.traducao += "\t" + charMenos + " = '-';\n";
+
+	string comparacaoMenos = gerarLabel();
+	inserirTemporaria (comparacaoMenos, "bool");
+	$$.traducao += "\t" comparacaoMenos + " = " + chartmp + " == "+ charMenos + ";\n";
+
+	string comparacaoIf1 = gerarLabel();
+	inserirTemporaria(comparacaoIf1, "bool");
+	$$.traducao += "\t" + comparacaoIf1 + " = " + comparacaoI + " && " + comparacaoMenos + ";\n"; 
+
+
+
+
+
+
+
+
+
+
+	return $$;
+
+	
+	
 }

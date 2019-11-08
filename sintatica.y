@@ -32,7 +32,7 @@ using namespace std;
 %token TK_LOGICO TK_STRING
 %token TK_IF TK_WHILE TK_FOR TK_ELSE TK_SWITCH TK_CASE TK_DEFAULT TK_DO 
 %token TK_BREAK TK_CONTINUE TK_ALL
-%token TK_PRINT TK_SCAN
+%token TK_PRINT TK_SCAN TK_ATON
 
 
 %start S
@@ -102,6 +102,7 @@ STATEMENT: 	E {$$.traducao = $1.traducao;}
 			| ATRIBUICAO {$$.traducao = $1.traducao;}
 			| PRINT  {$$.traducao = $1.traducao;}
 			| SCAN {$$.traducao = $1.traducao;}
+			| ATON{$$.traducao = $1.traducao;}
 			;
 
 COMANDOALT:	E PTO_VIRGULA { $$.traducao = $1.traducao; }
@@ -120,8 +121,13 @@ COMANDOALT:	E PTO_VIRGULA { $$.traducao = $1.traducao; }
 			;
 
 PTO_VIRGULA: ';' {}
-			| error {yyerror("Falta de ponto e virgula");}
+			;
 
+ATON:		TK_ATON '(' E ')'
+			{
+				$$ = converterStringInteiro($3);
+			}
+			;
 
 BREAK:		TK_BREAK
 			{
@@ -541,10 +547,15 @@ E:			E '+' E
 
 			//------------------ CONVERSAO EXPLICITA -------------------------
 			| '(' TIPO ')' E {
-				$$.label = gerarLabel();
-				$$.tipo = $2.traducao;
-				inserirTemporaria($$.label, $$.tipo);
-				$$.traducao = $4.traducao + "\t" + $$.label + " = (" + $2.traducao + ") " + $4.label + ";\n";
+				if($4.tipo != "string"){
+					$$.label = gerarLabel();
+					$$.tipo = $2.traducao;
+					inserirTemporaria($$.label, $$.tipo);
+					$$.traducao = $4.traducao + "\t" + $$.label + " = (" + $2.traducao + ") " + $4.label + ";\n";
+				}
+				else{
+					yyerror("Não é possivel converter string para " + $2.traducao + ", use a funcao: \n\t\tfloat aton(string)");
+				}
 			}
 
 			//}
