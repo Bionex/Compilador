@@ -33,6 +33,7 @@ using namespace std;
 %token TK_IF TK_WHILE TK_FOR TK_ELSE TK_SWITCH TK_CASE TK_DEFAULT TK_DO 
 %token TK_BREAK TK_CONTINUE TK_ALL
 %token TK_PRINT TK_SCAN TK_ATON
+%token TK_GLOBAL
 
 
 %start S
@@ -62,7 +63,7 @@ S:			TK_TIPO_INT TK_MAIN '(' ')' BLOCO
 					cout << erros;
 				}
 				else
-					cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\n\n#define BOOL int\n#define True 1\n#define False 0\n#define STRING char*\n\nint main(void)\n{\n" << declararVars() << "\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
+					cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\n\n#define BOOL int\n#define True 1\n#define False 0\n#define STRING char*\n\nusing namespace std;\nint main(void)\n{\n" << declararVars() << "\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
 			}
 			;
 
@@ -96,6 +97,7 @@ COMANDO:	STATEMENT PTO_VIRGULA {$$.traducao = $1.traducao;}
 			| CONTINUE PTO_VIRGULA{ $$.traducao = $1.traducao;}
 			| PTO_VIRGULA {$$.traducao = "";}
 			| BLOCO {$$.traducao = $1.traducao;}
+			| GLOBAL PTO_VIRGULA {$$.traducao = $1.traducao;}
 			;
 
 STATEMENT: 	E {$$.traducao = $1.traducao;}
@@ -376,20 +378,23 @@ WHILE:		E ')' BLOMANDO // removido o abre parenteses dessa regra devido a confli
 			}
 			;
 
-PRINT: 		TK_PRINT '('FN_ARGS')' {$$.traducao = $3.traducao + "\t" + "std::cout <<" + $3.label + "<<std::endl;\n";}
+PRINT: 		TK_PRINT '('FN_ARGS')' {$$.traducao = $3.traducao + "\tcout <<endl;\n";}
 			;
 
 FN_ARGS:	E FN_ARGS_AUX 
 			{
-				$$.traducao = $1.traducao + $2.traducao; $$.label = $1.label + $2.label;
+				$$.traducao = $1.traducao;
+				$$.traducao += "\tcout<<" + $1.label + ";\n";
+				$$.traducao += $2.traducao;
 			}
 			| /* empty */{$$.traducao = ""; $$.label = "";}
 			;
 
 FN_ARGS_AUX: ',' E  FN_ARGS_AUX
 			{
-				$$.traducao = $2.traducao + $3.traducao;
-				$$.label = "<<\" , \"<<" + $2.label + $3.label;
+				$$.traducao = $2.traducao + "\tcout<<\", \";\n";
+				$$.traducao += "\tcout<<" + $2.label + ";\n";
+				$$.traducao += $3.traducao;
 			}
 			| /* empty */{$$.traducao = ""; $$.label = ""; }
 			;
@@ -440,6 +445,10 @@ ATRIBUICAO:	TK_ID '=' E
 			{
 				$$ = codigoAtribuicao($1, $3);
 			}
+			| TK_GLOBAL TK_ID '=' E 
+			{
+				$$ = codigoAtribuicaoGlobal($2, $4);
+			}
 			;
 
 
@@ -447,6 +456,7 @@ ATRIBUICAO:	TK_ID '=' E
 DECLARACAO:	TIPO TK_ID DECLARACAO_AUX
 			{
 				$$ = declaracaoVariavel($2.label, $1.traducao);
+				$$.traducao += $3.traducao;
 			}
 			| TIPO TK_ID '=' E DECLARACAO_AUX
 			{
@@ -469,6 +479,31 @@ DECLARACAO_AUX:',' TK_ID DECLARACAO_AUX
 			}
 			| /*vazio */ {$$.traducao = "";}
 			;
+
+GLOBAL: 	TK_GLOBAL TIPO TK_ID GLOBAL_AUX 
+			{
+				//cout<< "AAAAAAAAAAAAAAAAAAA" << endl;
+				$$ = declaracaoVariavelGlobal($3.label,tipoDaDeclaracao);
+				$$.traducao += $4.traducao;
+			}
+			| TK_GLOBAL TIPO TK_ID '=' E GLOBAL_AUX 
+			{
+				$$ = declaracaoVariavelAtribuicaoGlobal($3.label, tipoDaDeclaracao, $5);
+				$$.traducao += $6.traducao;
+			}
+			;
+
+GLOBAL_AUX:	',' TK_ID GLOBAL_AUX 
+			{
+				$$ = declaracaoVariavelGlobal($3.label,tipoDaDeclaracao);
+			}
+			| ',' TK_ID '=' E GLOBAL_AUX 
+			{
+				$$ = declaracaoVariavelAtribuicaoGlobal($2.label, tipoDaDeclaracao, $4);
+			}
+			| /* vazio */{$$.traducao = "";}
+			;
+
 
 //        ----------------	ARITMETICA -----------------------
 E:			E '+' E
@@ -597,6 +632,17 @@ E:			E '+' E
 				$$.traducao = "\t" + $$.label + " = " + $1.traducao + ";\n";
 				$$.tipo = "char";
 			}
+			| TK_GLOBAL TK_ID
+			{
+				caracteristicas variavel = buscarVariavelGlobal($2.label);
+				if(variavel.localVar == ""){
+					yyerror("A variavel global \"" + $2.label +"\" foi usada e não foi declarada ainda ");
+				}
+				$$.label = variavel.localVar;
+				$$.traducao = "";
+				$$.tipo = variavel.tipo;
+				//cout << "$1.tipo = " << $1.tipo << endl;
+			}
 			| TK_ID{
 				caracteristicas variavel = buscarVariavel($1.label);
 				if(variavel.localVar == ""){
@@ -622,7 +668,7 @@ E:			E '+' E
 				inserirTemporaria(labelTamanho, "int");
 				$$.tipo = "string";
 				$$.traducao += "\t" + labelTamanho +  " = " + to_string(contarTamanhoString($1.traducao) + 1) + ";\n";
-				$$.traducao += "\t" + $$.label + " = (STRING) realloc(" + $$.label + ",sizeof(char) * " + labelTamanho  + ");\n";
+				$$.traducao += "\t" + $$.label + " = (STRING) realloc(" + $$.label + ", " + labelTamanho  + ");\n";
 				$$.traducao += "\tstrcpy( " + $$.label + ", \"" + $1.traducao + "\" );\n"; 
 				//cout <<"a string encontrada foi " +  $1.traducao << endl;
 			}

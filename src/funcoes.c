@@ -285,7 +285,7 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 				$$.traducao = $1.traducao + $3.traducao;
 				$$.traducao += "\t" + sizeFinal + " = " + sizeA + " + " + sizeB + ";\n";
 				$$.traducao += "\t" + sizeFinal + " = " + sizeFinal + " - 1;\n";
-				$$.traducao += "\t" + $$.label + " = (STRING) realloc(" + $$.label  + ",sizeof(char) * " + sizeFinal + " );\n";
+				$$.traducao += "\t" + $$.label + " = (STRING) realloc(" + $$.label  + ", " + sizeFinal + " );\n";
 				$$.traducao += "\t" + $$.label + "[0] = '\\0';\n";  
 				$$.traducao += "\tstrcat("+ $$.label + ", "+ $1.label +");\n";
 				$$.traducao += "\tstrcat("+ $$.label + ", "+ $3.label +");\n";
@@ -401,6 +401,14 @@ struct atributos declaracaoVariavel(string var, string tipo){
 				$$.traducao += "\t" + varCaracteristicas.localVar + " = 0.0;\n";
 			else if(tipo == "char")
 				$$.traducao += "\t" + varCaracteristicas.localVar + " = 'a';\n";
+			
+			else if(tipo == "string"){
+				string labelSize = gerarLabelStringSize(varCaracteristicas.localVar);
+				$$.traducao += "\t" + labelSize + " = 1;\n";
+				inserirTemporaria(labelSize,"int");
+				$$.traducao += "\t" + varCaracteristicas.localVar + " = (STRING) realloc(" + varCaracteristicas.localVar + ", " + labelSize + ");\n";
+				$$.traducao += "\t" + varCaracteristicas.localVar + "[0] = \'\\0\';\n";
+			}
 		}
 	}
 	else{
@@ -437,6 +445,77 @@ atributos declaracaoVariavelAtribuicao(string var, string tipo, atributos expres
 	else
 	{
 		yyerror("A variavel \"" + var  + "\" ja foi declada como "+ varCaracteristicas.tipo + " anteriormente");
+	}
+	return $$;
+}
+
+struct atributos declaracaoVariavelGlobal(string var, string tipo){
+	struct atributos $$;
+	$$.traducao = "";
+
+	caracteristicas varCaracteristicas = buscarVariavelGlobal(var);
+	
+	if(varCaracteristicas.localVar == ""){
+		//cout << "testando1" << endl;
+		if(varCaracteristicas.tipo == ""){
+			//cout << "testando" << endl;
+			//cout << "declarando "<< var << " como " << tipo << endl;
+			varCaracteristicas.tipo = tipo;
+			varCaracteristicas.localVar = labelUsuario();
+			varCaracteristicas.nomeVar = var;
+			addVar2Global(pilhaContexto,varCaracteristicas);
+			temporarias[varCaracteristicas.localVar] = tipo;
+			if(tipo == "int")
+				$$.traducao += "\t" + varCaracteristicas.localVar + " = 0;\n";
+			else if(tipo == "bool")
+				$$.traducao += "\t" + varCaracteristicas.localVar + " = False;\n";
+			else if(tipo == "float")
+				$$.traducao += "\t" + varCaracteristicas.localVar + " = 0.0;\n";
+			else if(tipo == "char")
+				$$.traducao += "\t" + varCaracteristicas.localVar + " = 'a';\n";
+			else if(tipo == "string"){
+				string labelSize = gerarLabelStringSize(varCaracteristicas.localVar);
+				$$.traducao += "\t" + labelSize + " = 1;\n";
+				inserirTemporaria(labelSize,"int");
+				$$.traducao += "\t" + varCaracteristicas.localVar + " = (STRING) realloc(" + varCaracteristicas.localVar + ", " + labelSize + ");\n";
+				$$.traducao += "\t" + varCaracteristicas.localVar + "[0] = \'\\0\';\n";
+			}
+		}
+	}
+	else{
+		yyerror("A variavel \"" + var  + "\" ja foi declada como "+ varCaracteristicas.tipo + " anteriormente no escopo global");
+	}
+
+	return $$;
+}
+
+atributos declaracaoVariavelAtribuicaoGlobal(string var, string tipo, atributos expressao){
+	atributos $$;
+	$$.traducao = "";
+
+	caracteristicas varCaracteristicas = buscarVariavelGlobal(var);
+	
+	if(varCaracteristicas.localVar == "")
+	{
+		//cout << "testando1" << endl;
+		if(varCaracteristicas.tipo == "")
+		{
+			//cout << "testando" << endl;
+			//cout << "declarando "<< var << " como " << tipo << endl;
+			varCaracteristicas.tipo = tipo;
+			varCaracteristicas.localVar = labelUsuario();
+			varCaracteristicas.nomeVar = var;
+			addVar2Global(pilhaContexto,varCaracteristicas);
+			temporarias[varCaracteristicas.localVar] = tipo;
+			atributos auxiliarVariavel = {var, "" , tipo};
+			atributos attr = codigoAtribuicao(auxiliarVariavel,expressao);
+			$$.traducao += attr.traducao; 
+		}
+
+	}
+	else
+	{
+		yyerror("A variavel global \"" + var  + "\" ja foi declada como "+ varCaracteristicas.tipo + " anteriormente");
 	}
 	return $$;
 }
@@ -532,6 +611,15 @@ caracteristicas buscarVariavelTopo(string var){
 	return createVar("","", "");
 }
 
+caracteristicas buscarVariavelGlobal(string var){
+	tabelaVariavel posAtual = pilhaContexto->escopos[0];
+	//cout << "buscando variavel " + var << endl;
+	if(posAtual.find(var) != posAtual.end()){
+		return (posAtual[var]);
+	}
+	return createVar("","", "");
+}
+
 atributos caracteristicasToAtributos(caracteristicas c){
 	atributos atr;
 	atr.tipo = c.tipo;
@@ -606,7 +694,7 @@ atributos leituraString(caracteristicas variavel){
 	string tamanhoLabel = gerarLabelStringSize(variavel.localVar);
 	inserirTemporaria(tamanhoLabel, "int");
 	inserirTemporaria(label, "string");
-	$$.traducao = "\t" + label + " = (STRING) realloc("+ label + ",sizeof(char) * 2000);\n";
+	$$.traducao = "\t" + label + " = (STRING) realloc("+ label + ", 2000);\n";
 	$$.traducao += "\tstd::cin >>" + label + ";\n";
 	$$.traducao += "\t" + tamanhoLabel + " = 0;\n";
 	$$.traducao +="\t" + gotoLabel + ":\n";
@@ -625,7 +713,7 @@ atributos leituraString(caracteristicas variavel){
 	$$.traducao += "\tgoto " + gotoLabel + ";\n";
 	$$.traducao += "\t" + endGotoLabel + ":\n";
 	$$.traducao += "\t" + tamanhoLabel + " = " + tamanhoLabel + " + 1;\n";
-	$$.traducao += "\t" + variavel.localVar + " = (STRING) realloc("+ variavel.localVar +"sizeof(char) * " + tamanhoLabel + " );\n";
+	$$.traducao += "\t" + variavel.localVar + " = (STRING) realloc("+ variavel.localVar +", " + tamanhoLabel + " );\n";
 	$$.traducao += "\tstrcpy( " + variavel.localVar + ", " + label + " );\n";
 	$$.traducao += "\tfree( "+ label + ");\n";
 
@@ -668,7 +756,50 @@ atributos codigoAtribuicao(atributos $1, atributos $3){
 			inserirTemporaria(tamanhoDestino, "int");
 			$$.traducao += $3.traducao;
 			$$.traducao += "\t" + tamanhoDestino + " = " + tamanhoSource + ";\n";
-			$$.traducao += "\t" + variavel.localVar + " = (STRING) realloc( "+ variavel.localVar + ", sizeof(char) * " + tamanhoDestino + ");\n";
+			$$.traducao += "\t" + variavel.localVar + " = (STRING) realloc( "+ variavel.localVar + ", " + tamanhoDestino + ");\n";
+			$$.traducao += "\tstrcpy( "+ variavel.localVar  + ", " + $3.label + " );\n";
+		}
+	}
+	return $$;
+}
+
+atributos codigoAtribuicaoGlobal(atributos $1, atributos $3){
+	//cout << " 1.t = " + $1.tipo << " 1.l = " + $1.label << " 3.t = " + $3.tipo <<" 3.l = " + $3.label << "fim impressao";
+	atributos $$;
+	caracteristicas variavel = buscarVariavelGlobal($1.label);
+	if(variavel.tipo != "string"){
+		if(variavel.tipo == $3.tipo){
+			$$.traducao = $3.traducao +  "\t" + variavel.localVar + " = " + $3.label + ";\n";
+		}
+		else
+		{
+			struct coercao correcao = verificarCoercao(variavel.tipo, "=", $3.tipo);
+			if(correcao.retornoTipo != "NULL")
+			{
+				
+				if(variavel.tipo == $3.tipo)
+				{
+					$$.traducao = $3.traducao +  "\t" + variavel.localVar + " = " + "(" + correcao.conversaoTipo + ")" + $3.label + ";\n";
+				}
+				else
+				{
+					yyerror("a operacao = nao esta definida para " + variavel.tipo + " e " + $3.tipo);
+				}
+
+			}
+		}
+	}
+	else
+	{
+		if(variavel.tipo != $3.tipo){
+			yyerror("Atribuicao nao esta definida para string e " + $3.tipo);
+		}
+		else{
+			string tamanhoSource = gerarLabelStringSize($3.label), tamanhoDestino = gerarLabelStringSize(variavel.localVar);
+			inserirTemporaria(tamanhoDestino, "int");
+			$$.traducao += $3.traducao;
+			$$.traducao += "\t" + tamanhoDestino + " = " + tamanhoSource + ";\n";
+			$$.traducao += "\t" + variavel.localVar + " = (STRING) realloc( "+ variavel.localVar + ", " + tamanhoDestino + ");\n";
 			$$.traducao += "\tstrcpy( "+ variavel.localVar  + ", " + $3.label + " );\n";
 		}
 	}
@@ -742,3 +873,6 @@ atributos converterStringInteiro(atributos variavel){
 	
 	
 }
+
+
+

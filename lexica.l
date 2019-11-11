@@ -46,6 +46,8 @@ ID {LETRA}({LETRA}|{NUM})*
 "bool"		{return TK_TIPO_BOOL;}
 "string"    {return TK_TIPO_STRING;}
 
+"global"    {return TK_GLOBAL;}
+
 
 [(){}[\];:,\']	{ return *yytext; }
 
