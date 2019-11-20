@@ -33,10 +33,11 @@ pilhaMapaPtr createMapStack(){
 
     pilhaMapaPtr pilha = (pilhaMapaPtr) malloc(sizeof(pilhaMapa));
     
-    tabelaVariavel escopinho;
+    tabelaVariavel escopinho, escopinho2;
     pushEscopo(pilha, escopinho);
+    pushEscopo(pilha, escopinho2);
     
-	pilha->escopoAtual = 0;
+	pilha->escopoAtual = 1;
     return pilha;
 }
 

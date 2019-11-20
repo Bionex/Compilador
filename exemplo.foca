@@ -1,15 +1,14 @@
-int main()
+
+
+global int a = 2 + 3, b = 3;
+
+global b = 2;
+int b = 1;
+
+
+print(global a, global b, b);
 {
-	global int a = 2 + 3, b = 5;
-	
-	global b = 2;
-	int b = 1;
-
-	print(global a, global b, b);
-	{
-		int b = 3;
-		print(b);
-	}
+	int b = 3;
+	print(b);
 }
-
 

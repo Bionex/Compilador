@@ -57,13 +57,13 @@ using namespace std;
 
 %%
 //{          ---------------- REGRAS ---------------------
-S:			TK_TIPO_INT TK_MAIN '(' ')' BLOCO
+S:			COMANDOS
 			{
 				if(temErro){
 					cout << erros;
 				}
 				else
-					cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\n\n#define BOOL int\n#define True 1\n#define False 0\n#define STRING char*\n\nusing namespace std;\nint main(void)\n{\n" << declararVars() << "\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
+					cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\n\n#define BOOL int\n#define True 1\n#define False 0\n#define STRING char*\n\nusing namespace std;\nint main(void)\n{\n" << declararVars() << "\n" <<$1.traducao << "\n\treturn 0;\n}" << endl; 
 			}
 			;
 
