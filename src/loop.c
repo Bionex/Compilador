@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../headers/loop.h"
-#include "../headers/funcoes.h"
+#include "../headers/main.h"
 
 using namespace std;
 

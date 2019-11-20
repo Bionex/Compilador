@@ -1,4 +1,4 @@
-#include "../headers/funcoes.h"
+#include "../headers/main.h"
 #include "../headers/escopo.h"
 #include "../headers/loop.h"
 

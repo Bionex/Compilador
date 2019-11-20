@@ -9,7 +9,7 @@
 #include <stack>
 #include "headers/escopo.h"
 #include "headers/loop.h"
-#include "headers/funcoes.h"
+#include "headers/main.h"
 
 #define YYSTYPE atributos
 
