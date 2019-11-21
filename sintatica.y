@@ -493,7 +493,7 @@ FUNCAO:		FUNCAO_AUX '{' COMANDOS '}'
 					
 				//yyerror("Funcao espera retorno " + $1.tipo + " e o retorno dado foi " + $5.tipo);
 				
-
+				popFunction();
 				popEscopo(pilhaContexto);
 
 			}
@@ -511,6 +511,7 @@ FUNCAO_AUX:	TIPO TK_ID BLOCO_AUX '(' ATRIBUTOS ')'
 				f.nomeFuncao = $2.label;
 				f.nomeLocal = c.localVar;
 				f.tipoRetorno = $1.traducao;
+				pushFunction(f.tipoRetorno);
 				bool conseguiu = inserirFuncao(f);
 
 				if(conseguiu){
@@ -529,6 +530,7 @@ FUNCAO_AUX:	TIPO TK_ID BLOCO_AUX '(' ATRIBUTOS ')'
 					tipoAtributos.clear();
 
 					addVar2EscopoSuperior(pilhaContexto, c);
+					
 					$$.tipo = $1.traducao;
 					$$.traducao = $1.traducao + " " + c.localVar + "( " + $5.traducao + ")\n";
 
@@ -542,6 +544,12 @@ RETURN:		TK_RETURN E
 			{
 				$$.traducao = $2.traducao + "\treturn " + $2.label+ ";\n";
 				$$.tipo = $2.tipo;
+				string tipoFuncao = getTopFunction();
+				if($2.tipo != tipoFuncao){
+					//verifica se eh possivel fazer coercao se não for erro
+
+					yyerror("A funcao espera retorno " + tipoFuncao + " e nao eh possivel fazer a conversao de " + $2.tipo  + " para " + tipoFuncao);
+				}
 			}
 
 ATRIBUTOS:	AUX_ATRIBUTOS ',' TIPO TK_ID

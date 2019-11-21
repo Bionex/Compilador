@@ -1,6 +1,7 @@
 #include "../headers/funcao.h"
 
 FunctionMap tabelaFuncoes;
+FunctionStack pilhaFuncoes;
 
 Function createFunction(int numeroAtributos){
     Function f;
@@ -32,4 +33,18 @@ bool inserirFuncao(Function f){
 
     return !error;
 }
+
+void pushFunction(string tipo){
+    pilhaFuncoes.push(tipo);
+}
+
+
+void popFunction(){
+    pilhaFuncoes.pop();
+}
+
+string getTopFunction(){
+    return pilhaFuncoes.top();
+}
+
 
