@@ -101,6 +101,7 @@ COMANDO:	STATEMENT PTO_VIRGULA {$$.traducao = $1.traducao;}
 			| BLOCO {$$.traducao = $1.traducao;}
 			| GLOBAL PTO_VIRGULA {$$.traducao = $1.traducao;}
 			| FUNCAO {$$.traducao = "";}
+			| RETURN PTO_VIRGULA{$$.traducao = $1.traducao;}
 			;
 
 STATEMENT: 	E {$$.traducao = $1.traducao;}
@@ -123,6 +124,7 @@ COMANDOALT:	E PTO_VIRGULA { $$.traducao = $1.traducao; }
 			| CONTINUE PTO_VIRGULA{ $$.traducao = $1.traducao;}
 			| SCAN PTO_VIRGULA {$$.traducao = $1.traducao;}
 			| PTO_VIRGULA {$$.traducao = "";}
+			| RETURN PTO_VIRGULA{$$.traducao = $1.traducao;}
 			;
 
 PTO_VIRGULA: ';' {}
@@ -483,53 +485,64 @@ DECLARACAO_AUX:',' TK_ID DECLARACAO_AUX
 			| /*vazio */ {$$.traducao = "";}
 			;
 
-FUNCAO:		TIPO TK_ID BLOCO_AUX '(' ATRIBUTOS ')' '{' COMANDOS TK_RETURN E ';' '}'
+FUNCAO:		FUNCAO_AUX '{' COMANDOS '}'
 			{
-				if($10.tipo == $1.traducao){
-					caracteristicas c;
-					c.tipo = "function";
-					c.localVar = gerarFuncaoLabel();
-					c.nomeVar = $2.label;
+				$$.traducao = $1.traducao + "{\n" + $3.traducao + "}\n";
 
-					Function f = createFunction(numeroAtributos);
-					f.atributos = tipoAtributos;
-					f.nomeFuncao = $2.label;
-					f.nomeLocal = c.localVar;
-					f.tipoRetorno = $1.traducao;
-					bool conseguiu = inserirFuncao(f);
-
-					if(conseguiu){
-
-						prototipos += f.tipoRetorno + " "+ f.nomeLocal +"( ";
-						for(int i = 0; i < numeroAtributos; i++){
-							if(i == 0){
-								prototipos += tipoAtributos[i];
-							}
-							else
-								prototipos += ", " + tipoAtributos[i];
-						}
-						prototipos += " );\n";
-
-						numeroAtributos = 0;
-						tipoAtributos.clear();
-
-						addVar2EscopoSuperior(pilhaContexto, c);
-						$$.traducao = $1.traducao + " " + c.localVar + "( " + $5.traducao + ")\n";
-						$$.traducao += "{\n" + $8.traducao + $10.traducao +"\treturn " + $10.label+";\n" + "}\n";
-						
-						funcoes += $$.traducao;
-					}
-					else{
-						yyerror("Não foi possivel fazer sobrecarga da funcao " + $1.traducao + " " + $2.label + "( " + $5.traducao + ")");
-					}
-				}
-				else
-					yyerror("Funcao espera retorno " + $1.traducao + " e o retorno dado foi " + $10.tipo);
+				funcoes += $$.traducao;
+					
+				//yyerror("Funcao espera retorno " + $1.tipo + " e o retorno dado foi " + $5.tipo);
+				
 
 				popEscopo(pilhaContexto);
 
 			}
 			;
+
+FUNCAO_AUX:	TIPO TK_ID BLOCO_AUX '(' ATRIBUTOS ')'
+			{
+				caracteristicas c;
+				c.tipo = "function";
+				c.localVar = gerarFuncaoLabel();
+				c.nomeVar = $2.label;
+
+				Function f = createFunction(numeroAtributos);
+				f.atributos = tipoAtributos;
+				f.nomeFuncao = $2.label;
+				f.nomeLocal = c.localVar;
+				f.tipoRetorno = $1.traducao;
+				bool conseguiu = inserirFuncao(f);
+
+				if(conseguiu){
+
+					prototipos += f.tipoRetorno + " "+ f.nomeLocal +"( ";
+					for(int i = 0; i < numeroAtributos; i++){
+						if(i == 0){
+							prototipos += tipoAtributos[i];
+						}
+						else
+							prototipos += ", " + tipoAtributos[i];
+					}
+					prototipos += " );\n";
+
+					numeroAtributos = 0;
+					tipoAtributos.clear();
+
+					addVar2EscopoSuperior(pilhaContexto, c);
+					$$.tipo = $1.traducao;
+					$$.traducao = $1.traducao + " " + c.localVar + "( " + $5.traducao + ")\n";
+
+				}
+				else{
+					yyerror("Não foi possivel fazer sobrecarga da funcao " + $1.traducao + " " + $2.label + "( " + $5.traducao + ")");
+				}
+			}
+
+RETURN:		TK_RETURN E
+			{
+				$$.traducao = $2.traducao + "\treturn " + $2.label+ ";\n";
+				$$.tipo = $2.tipo;
+			}
 
 ATRIBUTOS:	AUX_ATRIBUTOS ',' TIPO TK_ID
 			{

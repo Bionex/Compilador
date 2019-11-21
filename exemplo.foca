@@ -1,14 +1,9 @@
-int func(){
-	1 + 1;
-	return 1 + 1;
-}
-int func(int a){
-	return a * 3;
-}
-
-int func(float a){
-	return (int)( a * 5);
+int fatorial(int n){
+	if(n == 0){
+		return 1;
+	}
+	return fatorial(n - 1) * n;
 }
 
 
-print(func(4.0));
+print(fatorial(5));
