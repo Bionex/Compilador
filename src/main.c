@@ -14,12 +14,21 @@ int nGotoWhile = 0;
 int nGotoDo = 0;
 int nGotoFor = 0;
 int lineCount = 1;
+int nFuncao = 0;
 
 stack <SwitchLabels> gambiarraSwitch ;
 
 string tipoDaDeclaracao = "";
 
 string erros = "\n";
+string funcoes = "\n//funcoes\n";
+string prototipos = "\n//prototipos\n";
+int numeroAtributos = 0;
+vector<string> tipoAtributos;
+
+int numeroAtributosChamada = 0;
+vector<string> tipoAtributosChamada;
+
 bool temErro = 0;
 
 pilhaMapaPtr pilhaContexto = createMapStack();
@@ -53,6 +62,9 @@ string gerarGotoLabel(){
 	
 }
 
+string gerarFuncaoLabel(){
+	return "FUNCTION" + to_string(nFuncao++);
+}
 Loop gerarGotoDoLabel(){
 	string startLabel = "do_inicio_" + to_string(nGotoDo);
 	string endLabel = "do_fim_" + to_string(nGotoDo);
@@ -96,13 +108,9 @@ string labelUsuario(){
 string declararVars(){
 	string retorno = "";
 	for(auto &x: temporarias){
-		if(x.second == "bool")
-			x.second = "BOOL";
-		else if(x.second == "string")
-			x.second = "STRING";
-		retorno = retorno + "\t" + x.second + " " +x.first + ";\n";
+		retorno = retorno + "" + x.second + " " +x.first + ";\n";
 		if(x.second == "STRING")
-			retorno += "\t" + x.first + " = NULL;\n";
+			retorno += "" + x.first + " = NULL;\n";
 	}
 	return retorno;
 }
@@ -180,49 +188,49 @@ void inicializarTabelaCoercao(){
 	tabelaCoercao[genKey("float", "=", "int")] = {"float","float"};
 
 
-	tabelaCoercao[genKey("bool" , "&&", "bool")] = {"bool","bool"};
-	tabelaCoercao[genKey("bool" , "||", "bool")] = {"bool","bool"};
+	tabelaCoercao[genKey("BOOL" , "&&", "BOOL")] = {"BOOL","BOOL"};
+	tabelaCoercao[genKey("BOOL" , "||", "BOOL")] = {"BOOL","BOOL"};
 
-	//tabelaCoercao[genKey("bool" , "<", "bool")] = "bool";
-	tabelaCoercao[genKey("int" , "<", "int")] = {"bool","int"};
-	tabelaCoercao[genKey("float" , "<", "float")] = {"bool","float"};
-	tabelaCoercao[genKey("char" , "<", "char")] = {"bool", "char"};
-	tabelaCoercao[genKey("int" , "<", "float")] = {"bool","float"};
+	//tabelaCoercao[genKey("BOOL" , "<", "BOOL")] = "BOOL";
+	tabelaCoercao[genKey("int" , "<", "int")] = {"BOOL","int"};
+	tabelaCoercao[genKey("float" , "<", "float")] = {"BOOL","float"};
+	tabelaCoercao[genKey("char" , "<", "char")] = {"BOOL", "char"};
+	tabelaCoercao[genKey("int" , "<", "float")] = {"BOOL","float"};
 
-	tabelaCoercao[genKey("int" , ">", "int")] = {"bool","int"};
-	tabelaCoercao[genKey("float" , ">", "float")] = {"bool","float"};
-	tabelaCoercao[genKey("char" , ">", "char")] = {"bool", "char"};
-	tabelaCoercao[genKey("int" , ">", "float")] = {"bool","float"};
+	tabelaCoercao[genKey("int" , ">", "int")] = {"BOOL","int"};
+	tabelaCoercao[genKey("float" , ">", "float")] = {"BOOL","float"};
+	tabelaCoercao[genKey("char" , ">", "char")] = {"BOOL", "char"};
+	tabelaCoercao[genKey("int" , ">", "float")] = {"BOOL","float"};
 
-	tabelaCoercao[genKey("int" , ">=", "int")] = {"bool","int"};
-	tabelaCoercao[genKey("float" , ">=", "float")] = {"bool","float"};
-	tabelaCoercao[genKey("int" , ">=", "float")] = {"bool","float"};
-	tabelaCoercao[genKey("char" , ">=", "char")] = {"bool", "char"};
+	tabelaCoercao[genKey("int" , ">=", "int")] = {"BOOL","int"};
+	tabelaCoercao[genKey("float" , ">=", "float")] = {"BOOL","float"};
+	tabelaCoercao[genKey("int" , ">=", "float")] = {"BOOL","float"};
+	tabelaCoercao[genKey("char" , ">=", "char")] = {"BOOL", "char"};
 
-	tabelaCoercao[genKey("int" , "<=", "int")] = {"bool","int"};
-	tabelaCoercao[genKey("float" , "<=", "float")] = {"bool","float"};
-	tabelaCoercao[genKey("int" , "<=", "float")] = {"bool","float"};
-	tabelaCoercao[genKey("char" , "<=", "char")] = {"bool", "char"};
+	tabelaCoercao[genKey("int" , "<=", "int")] = {"BOOL","int"};
+	tabelaCoercao[genKey("float" , "<=", "float")] = {"BOOL","float"};
+	tabelaCoercao[genKey("int" , "<=", "float")] = {"BOOL","float"};
+	tabelaCoercao[genKey("char" , "<=", "char")] = {"BOOL", "char"};
 
-	tabelaCoercao[genKey("int" , "==", "int")] = {"bool","int"};
-	tabelaCoercao[genKey("float" , "==", "float")] = {"bool","float"};
-	tabelaCoercao[genKey("int" , "==", "float")] = {"bool","float"};
-	tabelaCoercao[genKey("char" , "==", "char")] = {"bool","char"};
-	tabelaCoercao[genKey("bool" , "==", "bool")] = {"bool","bool"};
+	tabelaCoercao[genKey("int" , "==", "int")] = {"BOOL","int"};
+	tabelaCoercao[genKey("float" , "==", "float")] = {"BOOL","float"};
+	tabelaCoercao[genKey("int" , "==", "float")] = {"BOOL","float"};
+	tabelaCoercao[genKey("char" , "==", "char")] = {"BOOL","char"};
+	tabelaCoercao[genKey("BOOL" , "==", "BOOL")] = {"BOOL","BOOL"};
 
-	tabelaCoercao[genKey("int" , "!=", "int")] = {"bool","int"};
-	tabelaCoercao[genKey("float" , "!=", "float")] = {"bool","float"};
-	tabelaCoercao[genKey("int" , "!=", "float")] = {"bool","float"};
-	tabelaCoercao[genKey("char" , "!=", "char")] = {"bool","char"};
-	tabelaCoercao[genKey("bool" , "!=", "bool")] = {"bool","bool"};
+	tabelaCoercao[genKey("int" , "!=", "int")] = {"BOOL","int"};
+	tabelaCoercao[genKey("float" , "!=", "float")] = {"BOOL","float"};
+	tabelaCoercao[genKey("int" , "!=", "float")] = {"BOOL","float"};
+	tabelaCoercao[genKey("char" , "!=", "char")] = {"BOOL","char"};
+	tabelaCoercao[genKey("BOOL" , "!=", "BOOL")] = {"BOOL","BOOL"};
 
-	tabelaCoercao[genKey("string" , "+" , "string")] = {"string", "string"};
-	tabelaCoercao[genKey("string", "==", "string")] = {"bool", "string"};
-	tabelaCoercao[genKey("string", "!=", "string")] = {"bool", "string"};
-	tabelaCoercao[genKey("string", "<", "string")] = {"bool", "string"};
-	tabelaCoercao[genKey("string", ">", "string")] = {"bool", "string"};
-	tabelaCoercao[genKey("string", "<=", "string")] = {"bool", "string"};
-	tabelaCoercao[genKey("string", ">=", "string")] = {"bool", "string"};
+	tabelaCoercao[genKey("STRING" , "+" , "STRING")] = {"STRING", "STRING"};
+	tabelaCoercao[genKey("STRING", "==", "STRING")] = {"BOOL", "STRING"};
+	tabelaCoercao[genKey("STRING", "!=", "STRING")] = {"BOOL", "STRING"};
+	tabelaCoercao[genKey("STRING", "<", "STRING")] = {"BOOL", "STRING"};
+	tabelaCoercao[genKey("STRING", ">", "STRING")] = {"BOOL", "STRING"};
+	tabelaCoercao[genKey("STRING", "<=", "STRING")] = {"BOOL", "STRING"};
+	tabelaCoercao[genKey("STRING", ">=", "STRING")] = {"BOOL", "STRING"};
 
 
 
@@ -247,7 +255,7 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 		$$.label = gerarLabel();
 		inserirTemporaria($$.label , coercaoToken.retornoTipo);
 
-		if(coercaoToken.conversaoTipo != "string")
+		if(coercaoToken.conversaoTipo != "STRING")
 		{
 			$$.tipo = coercaoToken.retornoTipo;
 			if($1.tipo == coercaoToken.conversaoTipo && $3.tipo == coercaoToken.conversaoTipo)
@@ -296,7 +304,7 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 				inserirTemporaria(labelTMPSTRCMP, "int");
 				$$.traducao += "\t" + labelTMPSTRCMP + " = strcmp(" + $1.label+ ", " + $3.label + " );\n";
 				string labelTMPBOOL1 = gerarLabel();
-				inserirTemporaria(labelTMPBOOL1, "bool");
+				inserirTemporaria(labelTMPBOOL1, "BOOL");
 				string labelTMPInt = gerarLabel();
 				inserirTemporaria(labelTMPInt, "int");
 				$$.traducao += "\t" + labelTMPInt + " = 0;\n";
@@ -309,7 +317,7 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 				inserirTemporaria(labelTMPSTRCMP, "int");
 				$$.traducao += "\t" + labelTMPSTRCMP + " = strcmp(" + $1.label+ ", " + $3.label + " );\n";
 				string labelTMPBOOL1 = gerarLabel();
-				inserirTemporaria(labelTMPBOOL1, "bool");
+				inserirTemporaria(labelTMPBOOL1, "BOOL");
 				string labelTMPInt = gerarLabel();
 				inserirTemporaria(labelTMPInt, "int");
 				$$.traducao += "\t" + labelTMPInt + " = 0;\n";
@@ -322,7 +330,7 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 				inserirTemporaria(labelTMPSTRCMP, "int");
 				$$.traducao += "\t" + labelTMPSTRCMP + " = strcmp(" + $1.label+ ", " + $3.label + " );\n";
 				string labelTMPBOOL1 = gerarLabel();
-				inserirTemporaria(labelTMPBOOL1, "bool");
+				inserirTemporaria(labelTMPBOOL1, "BOOL");
 				string labelTMPInt = gerarLabel();
 				inserirTemporaria(labelTMPInt, "int");
 				$$.traducao += "\t" + labelTMPInt + " = -1;\n";
@@ -335,7 +343,7 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 				inserirTemporaria(labelTMPSTRCMP, "int");
 				$$.traducao += "\t" + labelTMPSTRCMP + " = strcmp(" + $1.label+ ", " + $3.label + " );\n";
 				string labelTMPBOOL1 = gerarLabel();
-				inserirTemporaria(labelTMPBOOL1, "bool");
+				inserirTemporaria(labelTMPBOOL1, "BOOL");
 				string labelTMPInt = gerarLabel();
 				inserirTemporaria(labelTMPInt, "int");
 				$$.traducao += "\t" + labelTMPInt + " = 1;\n";
@@ -348,7 +356,7 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 				inserirTemporaria(labelTMPSTRCMP, "int");
 				$$.traducao += "\t" + labelTMPSTRCMP + " = strcmp(" + $1.label+ ", " + $3.label + " );\n";
 				string labelTMPBOOL1 = gerarLabel();
-				inserirTemporaria(labelTMPBOOL1, "bool");
+				inserirTemporaria(labelTMPBOOL1, "BOOL");
 				string labelTMPInt = gerarLabel();
 				inserirTemporaria(labelTMPInt, "int");
 				$$.traducao += "\t" + labelTMPInt + " = -1;\n";
@@ -361,7 +369,7 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 				inserirTemporaria(labelTMPSTRCMP, "int");
 				$$.traducao += "\t" + labelTMPSTRCMP + " = strcmp(" + $1.label+ ", " + $3.label + " );\n";
 				string labelTMPBOOL1 = gerarLabel();
-				inserirTemporaria(labelTMPBOOL1, "bool");
+				inserirTemporaria(labelTMPBOOL1, "BOOL");
 				string labelTMPInt = gerarLabel();
 				inserirTemporaria(labelTMPInt, "int");
 				$$.traducao += "\t" + labelTMPInt + " = 1;\n";
@@ -395,14 +403,14 @@ struct atributos declaracaoVariavel(string var, string tipo){
 			temporarias[varCaracteristicas.localVar] = tipo;
 			if(tipo == "int")
 				$$.traducao += "\t" + varCaracteristicas.localVar + " = 0;\n";
-			else if(tipo == "bool")
+			else if(tipo == "BOOL")
 				$$.traducao += "\t" + varCaracteristicas.localVar + " = False;\n";
 			else if(tipo == "float")
 				$$.traducao += "\t" + varCaracteristicas.localVar + " = 0.0;\n";
 			else if(tipo == "char")
 				$$.traducao += "\t" + varCaracteristicas.localVar + " = 'a';\n";
 			
-			else if(tipo == "string"){
+			else if(tipo == "STRING"){
 				string labelSize = gerarLabelStringSize(varCaracteristicas.localVar);
 				$$.traducao += "\t" + labelSize + " = 1;\n";
 				inserirTemporaria(labelSize,"int");
@@ -467,13 +475,13 @@ struct atributos declaracaoVariavelGlobal(string var, string tipo){
 			temporarias[varCaracteristicas.localVar] = tipo;
 			if(tipo == "int")
 				$$.traducao += "\t" + varCaracteristicas.localVar + " = 0;\n";
-			else if(tipo == "bool")
+			else if(tipo == "BOOL")
 				$$.traducao += "\t" + varCaracteristicas.localVar + " = False;\n";
 			else if(tipo == "float")
 				$$.traducao += "\t" + varCaracteristicas.localVar + " = 0.0;\n";
 			else if(tipo == "char")
 				$$.traducao += "\t" + varCaracteristicas.localVar + " = 'a';\n";
-			else if(tipo == "string"){
+			else if(tipo == "STRING"){
 				string labelSize = gerarLabelStringSize(varCaracteristicas.localVar);
 				$$.traducao += "\t" + labelSize + " = 1;\n";
 				inserirTemporaria(labelSize,"int");
@@ -537,7 +545,7 @@ struct atributos operacaoRelacional(struct atributos $1, struct atributos $3, st
 
 
 	$$.label = gerarLabel();
-	$$.tipo = "bool";
+	$$.tipo = "BOOL";
 	inserirTemporaria($$.label , $$.tipo);
 	if(aux.retornoTipo != "NULL"){
 		$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + operador + " " + $3.label + ";\n";
@@ -563,7 +571,7 @@ struct atributos gerarCodigoRelacional(struct atributos $1, struct atributos $3,
 
 
 	$$.label = gerarLabel();
-	$$.tipo = "bool";
+	$$.tipo = "BOOL";
 	inserirTemporaria($$.label , $$.tipo);
 	if(aux != ""){
 		$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + operador + " " + $3.label + ";\n";
@@ -693,7 +701,7 @@ atributos leituraString(caracteristicas variavel){
 	string endGotoLabel = gerarGotoLabel();
 	string tamanhoLabel = gerarLabelStringSize(variavel.localVar);
 	inserirTemporaria(tamanhoLabel, "int");
-	inserirTemporaria(label, "string");
+	inserirTemporaria(label, "STRING");
 	$$.traducao = "\t" + label + " = (STRING) realloc("+ label + ", 2000);\n";
 	$$.traducao += "\tstd::cin >>" + label + ";\n";
 	$$.traducao += "\t" + tamanhoLabel + " = 0;\n";
@@ -724,7 +732,7 @@ atributos codigoAtribuicao(atributos $1, atributos $3){
 	//cout << " 1.t = " + $1.tipo << " 1.l = " + $1.label << " 3.t = " + $3.tipo <<" 3.l = " + $3.label << "fim impressao";
 	atributos $$;
 	caracteristicas variavel = buscarVariavel($1.label);
-	if(variavel.tipo != "string"){
+	if(variavel.tipo != "STRING"){
 		if(variavel.tipo == $3.tipo){
 			$$.traducao = $3.traducao +  "\t" + variavel.localVar + " = " + $3.label + ";\n";
 		}
@@ -767,7 +775,7 @@ atributos codigoAtribuicaoGlobal(atributos $1, atributos $3){
 	//cout << " 1.t = " + $1.tipo << " 1.l = " + $1.label << " 3.t = " + $3.tipo <<" 3.l = " + $3.label << "fim impressao";
 	atributos $$;
 	caracteristicas variavel = buscarVariavelGlobal($1.label);
-	if(variavel.tipo != "string"){
+	if(variavel.tipo != "STRING"){
 		if(variavel.tipo == $3.tipo){
 			$$.traducao = $3.traducao +  "\t" + variavel.localVar + " = " + $3.label + ";\n";
 		}
@@ -816,7 +824,7 @@ atributos converterStringInteiro(atributos variavel){
 	$$.traducao += "\t" + chartmp + " = " + variavel.label + "[0]\n";
 
 	string minus = gerarLabel();
-	inserirTemporaria(minus, "bool");
+	inserirTemporaria(minus, "BOOL");
 	$$.traducao += "\t" + minus + " = False;\n";
 
 	string numero = gerarLabel();
@@ -833,7 +841,7 @@ atributos converterStringInteiro(atributos variavel){
 	$$.traducao += "\t" + tmpBarra0 + " = '\0';\n";
 
 	string tmpComparacaoWhile = gerarLabel();
-	inserirTemporaria(tmpComparacaoWhile, "bool");
+	inserirTemporaria(tmpComparacaoWhile, "BOOL");
 	$$.traducao += "\t" + tmpComparacaoWhile + " = " + chartmp + " != " + tmpBarra0 + ";\n";
 	$$.traducao += "\t" + tmpComparacaoWhile + " = !" + tmpComparacaoWhile + ";\n";
 
@@ -844,7 +852,7 @@ atributos converterStringInteiro(atributos variavel){
 	$$.traducao += "\t" + tmpIigual0 + " = 0;\n";
 
 	string comparacaoI = gerarLabel();
-	inserirTemporaria(comparacaoI, "bool");
+	inserirTemporaria(comparacaoI, "BOOL");
 	$$.traducao += "\t" + comparacaoI+ " = " + tmpI + " == " + tmpIigual0 + ";\n";
 
 	string charMenos = gerarLabel();
@@ -852,11 +860,11 @@ atributos converterStringInteiro(atributos variavel){
 	$$.traducao += "\t" + charMenos + " = '-';\n";
 
 	string comparacaoMenos = gerarLabel();
-	inserirTemporaria (comparacaoMenos, "bool");
+	inserirTemporaria (comparacaoMenos, "BOOL");
 	$$.traducao += "\t" + comparacaoMenos + " = " + chartmp + " == "+ charMenos + ";\n";
 
 	string comparacaoIf1 = gerarLabel();
-	inserirTemporaria(comparacaoIf1, "bool");
+	inserirTemporaria(comparacaoIf1, "BOOL");
 	$$.traducao += "\t" + comparacaoIf1 + " = " + comparacaoI + " && " + comparacaoMenos + ";\n"; 
 
 

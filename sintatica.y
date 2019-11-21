@@ -10,6 +10,7 @@
 #include "headers/escopo.h"
 #include "headers/loop.h"
 #include "headers/main.h"
+#include "headers/funcao.h"
 
 #define YYSTYPE atributos
 
@@ -34,6 +35,7 @@ using namespace std;
 %token TK_BREAK TK_CONTINUE TK_ALL
 %token TK_PRINT TK_SCAN TK_ATON
 %token TK_GLOBAL
+%token TK_RETURN
 
 
 %start S
@@ -63,7 +65,7 @@ S:			COMANDOS
 					cout << erros;
 				}
 				else
-					cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\n\n#define BOOL int\n#define True 1\n#define False 0\n#define STRING char*\n\nusing namespace std;\nint main(void)\n{\n" << declararVars() << "\n" <<$1.traducao << "\n\treturn 0;\n}" << endl; 
+					cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\n\n#define BOOL int\n#define True 1\n#define False 0\n#define STRING char*\n\nusing namespace std;\n\n"<< prototipos <<"\n"<< declararVars() << "\nint main(void)\n{\n" << "\n" <<$1.traducao << "\n\treturn 0;\n}"<< "\n\n" + funcoes << endl; 
 			}
 			;
 
@@ -98,6 +100,7 @@ COMANDO:	STATEMENT PTO_VIRGULA {$$.traducao = $1.traducao;}
 			| PTO_VIRGULA {$$.traducao = "";}
 			| BLOCO {$$.traducao = $1.traducao;}
 			| GLOBAL PTO_VIRGULA {$$.traducao = $1.traducao;}
+			| FUNCAO {$$.traducao = ""; funcoes +=  $1.traducao;}
 			;
 
 STATEMENT: 	E {$$.traducao = $1.traducao;}
@@ -410,7 +413,7 @@ SCAN_ARGS:	TIPO ':' TK_ID ',' SCAN_ARGS
 				caracteristicas variavel = buscarVariavel($3.label);
 				if($1.traducao != variavel.tipo)
 					yyerror("A variavel \""+variavel.nomeVar + "\" eh do tipo " + variavel.tipo + " e o tipo requisitado eh "+ $1.traducao);
-				if(variavel.tipo != "string")
+				if(variavel.tipo != "STRING")
 				{
 					$$.traducao = "\tcin >> " + variavel.localVar + ";\n" + $5.traducao;
 				}
@@ -427,7 +430,7 @@ SCAN_ARGS:	TIPO ':' TK_ID ',' SCAN_ARGS
 				caracteristicas variavel = buscarVariavel($3.label);
 				if($1.traducao != variavel.tipo)
 					yyerror("A variavel \""+variavel.nomeVar + "\" eh do tipo " + variavel.tipo + " e o tipo requisitado eh "+ $1.traducao);
-				if($1.traducao != "string")
+				if($1.traducao != "STRING")
 				{
 					$$.traducao = "\tcin >> " + variavel.localVar + ";\n";
 				}
@@ -478,6 +481,120 @@ DECLARACAO_AUX:',' TK_ID DECLARACAO_AUX
 				$$.traducao += $5.traducao;
 			}
 			| /*vazio */ {$$.traducao = "";}
+			;
+
+FUNCAO:		TIPO TK_ID BLOCO_AUX '(' ATRIBUTOS ')' '{' COMANDOS TK_RETURN E ';' '}'
+			{
+				if($10.tipo == $1.traducao){
+					caracteristicas c;
+					c.tipo = "function";
+					c.localVar = gerarFuncaoLabel();
+					c.nomeVar = $2.label;
+
+					Function f = createFunction(numeroAtributos);
+					f.atributos = tipoAtributos;
+					f.nomeFuncao = $2.label;
+					f.nomeLocal = c.localVar;
+					f.tipoRetorno = $1.traducao;
+					inserirFuncao(f);
+
+					prototipos += f.tipoRetorno + " "+ f.nomeLocal +"( ";
+					for(int i = 0; i < numeroAtributos; i++){
+						if(i == 0){
+							prototipos += tipoAtributos[i];
+						}
+						else
+							prototipos += ", " + tipoAtributos[i];
+					}
+					prototipos += " );\n";
+
+					numeroAtributos = 0;
+					tipoAtributos.clear();
+
+					addVar2EscopoSuperior(pilhaContexto, c);
+					$$.traducao = $1.traducao + " " + c.localVar + "( " + $5.traducao + ")\n";
+					$$.traducao += "{\n" + $8.traducao + $10.traducao +"\treturn " + $10.label+";\n" + "}\n";
+				}
+				else
+					yyerror("Funcao espera retorno " + $1.traducao + " e o retorno dado foi " + $10.tipo);
+
+				popEscopo(pilhaContexto);
+
+			}
+			;
+
+ATRIBUTOS:	AUX_ATRIBUTOS ',' TIPO TK_ID
+			{
+				numeroAtributos++;
+				caracteristicas c = buscarVariavel($4.label);
+				if(c.localVar == ""){
+					c.tipo = $3.traducao;
+					c.localVar = labelUsuario();
+					c.nomeVar = $4.label;
+					$$.traducao = $1.traducao +", " + c.tipo + " "+  c.localVar;
+					inserirTemporaria(c.localVar, c.tipo);
+					addVar2Escopo(pilhaContexto, c);
+					tipoAtributos.push_back($3.traducao);
+				}
+				else
+					yyerror("Variavel " + c.nomeVar + " ja foi usada na declaracao da funcao anteriormente");
+				
+				
+			}
+			| TIPO TK_ID
+			{
+				numeroAtributos++;
+				caracteristicas c = buscarVariavel($2.label);
+				if(c.localVar == ""){
+					c.tipo = $1.traducao;
+					c.localVar = labelUsuario();
+					c.nomeVar = $2.label;
+					$$.traducao = c.tipo + " " + c.localVar;
+					inserirTemporaria(c.localVar, c.tipo);
+					addVar2Escopo(pilhaContexto, c);
+					tipoAtributos.push_back($1.traducao);
+				}
+				else
+					yyerror("Variavel " + c.nomeVar + " ja foi usada na declaracao da funcao anteriormente");
+				
+			}
+			|/*VAZIO */ {$$.traducao = "";};
+			;
+
+AUX_ATRIBUTOS: AUX_ATRIBUTOS ',' TIPO TK_ID 
+			{
+				numeroAtributos++;
+				caracteristicas c = buscarVariavel($4.label);
+				if(c.localVar == ""){
+					c.tipo = $3.traducao;
+					c.localVar = labelUsuario();
+					c.nomeVar = $4.label;
+					$$.traducao = $1.traducao +", " + c.tipo + " "+  c.localVar;
+					inserirTemporaria(c.localVar, c.tipo);
+					addVar2Escopo(pilhaContexto, c);
+					tipoAtributos.push_back($3.traducao);
+				}
+				else
+					yyerror("Variavel " + c.nomeVar + " ja foi usada na declaracao da funcao anteriormente");
+				
+			}
+			| TIPO TK_ID
+			{
+				numeroAtributos++;
+				caracteristicas c = buscarVariavel($2.label);
+				if(c.localVar == ""){
+					c.tipo = $1.traducao;
+					c.localVar = labelUsuario();
+					c.nomeVar = $2.label;
+					$$.traducao = c.tipo + " " + c.localVar;
+					inserirTemporaria(c.localVar, c.tipo);
+					addVar2Escopo(pilhaContexto, c);
+					tipoAtributos.push_back($1.traducao);
+				}
+				else
+					yyerror("Variavel " + c.nomeVar + " ja foi usada na declaracao da funcao anteriormente");
+			
+			}
 			;
 
 GLOBAL: 	TK_GLOBAL TIPO TK_ID GLOBAL_AUX 
@@ -582,7 +699,7 @@ E:			E '+' E
 
 			//------------------ CONVERSAO EXPLICITA -------------------------
 			| '(' TIPO ')' E {
-				if($4.tipo != "string"){
+				if($4.tipo != "STRING"){
 					$$.label = gerarLabel();
 					$$.tipo = $2.traducao;
 					inserirTemporaria($$.label, $$.tipo);
@@ -598,7 +715,7 @@ E:			E '+' E
 				caracteristicas variavel = buscarVariavel($1.label);
 				if(variavel.localVar == "")
 					yyerror("Variavel "+ $1.label + " usada antes de ser declarada");
-				else if(variavel.tipo == "string"){
+				else if(variavel.tipo == "STRING"){
 					string temporaria = gerarLabel();
 					inserirTemporaria(temporaria, "char");
 					//cout << temporaria << endl;
@@ -663,23 +780,101 @@ E:			E '+' E
 			| TK_STRING{
 				$$.traducao = "";
 				$$.label = gerarLabel();
-				inserirTemporaria($$.label, "string");
+				inserirTemporaria($$.label, "STRING");
 				string labelTamanho = gerarLabelStringSize($$.label);
 				inserirTemporaria(labelTamanho, "int");
-				$$.tipo = "string";
+				$$.tipo = "STRING";
 				$$.traducao += "\t" + labelTamanho +  " = " + to_string(contarTamanhoString($1.traducao) + 1) + ";\n";
 				$$.traducao += "\t" + $$.label + " = (STRING) realloc(" + $$.label + ", " + labelTamanho  + ");\n";
 				$$.traducao += "\tstrcpy( " + $$.label + ", \"" + $1.traducao + "\" );\n"; 
 				//cout <<"a string encontrada foi " +  $1.traducao << endl;
 			}
+			| TK_ID '(' PARAMETROS ')' 
+			{
+				caracteristicas c = buscarVariavel($1.label);
+				if(c.tipo == "function"){
+					vector<Function> f = buscarFuncao($1.label);
+					if(!f.empty())
+					{
+						bool achou = false;
+						for(int x = 0; x < f.size();x++)
+						{
+							if(numeroAtributosChamada == f[x].numeroAtributos){
+								if(tipoAtributosChamada == f[x].atributos)
+								{
+									string labelTmp = gerarLabel();
+									string tipo = f[x].tipoRetorno;
+									$$.tipo = tipo;
+									$$.label = labelTmp;
+									inserirTemporaria(labelTmp, tipo);
+									achou = true;
+									$$.traducao = $3.traducao + "\t" + labelTmp +" = " + f[x].nomeLocal + "(" + $3.label + ");\n";
+									break;
+								}
+							}
+						}
+						if(achou == false){	
+							string errorMessage;
+							for(int i = 0; i < numeroAtributosChamada; i++){
+								if(i == 0)
+									errorMessage += tipoAtributosChamada[i];
+								else
+									errorMessage += ", "+ tipoAtributosChamada[i];
+							}
+							yyerror("Nao foi possivel achar uma funcao com o nome " + $1.label + " e os atributos ("+ errorMessage + ")");
+						}
+						
+						
+					
+					}
+				}
+				else if(c.tipo != "")
+					yyerror("Tentativa de chamar " + $1.label + " que não eh uma funcao.");	
+				else
+					yyerror($2.label + " não foi declarado ainda");
+				
+				numeroAtributosChamada = 0;
+				tipoAtributosChamada.clear();
+			}
 			;
 
+PARAMETROS:	E 
+			{
+				numeroAtributosChamada++;
+				tipoAtributosChamada.push_back($1.tipo);
+				$$.traducao = $1.traducao;
+				$$.label = $1.label;
+			}
+			| AUX_PARAMETROS ',' E
+			{
+				numeroAtributosChamada++;
+				tipoAtributosChamada.push_back($3.tipo);
+				$$.traducao = $1.traducao + $3.traducao;
+				$$.label = $1.label + ", " + $3.label;
+			}
+			| /*VAZIO */{$$.traducao = ""; $$.label = "";}
+			;
 
-TIPO:		TK_TIPO_BOOL	{$$.traducao = "bool"; tipoDaDeclaracao = "bool";}
+AUX_PARAMETROS:	E
+			{
+				numeroAtributosChamada++;
+				tipoAtributosChamada.push_back($1.tipo);
+				$$.traducao = $1.traducao;
+				$$.label = $1.label;
+			}
+			| AUX_PARAMETROS ',' E
+			{
+				numeroAtributosChamada++;
+				tipoAtributosChamada.push_back($3.tipo);
+				$$.traducao = $1.traducao + $3.traducao;
+				$$.label = $1.label + ", " + $3.label;
+			}
+
+TIPO:		TK_TIPO_BOOL	{$$.traducao = "BOOL"; tipoDaDeclaracao = "BOOL";}
 			| TK_TIPO_INT	{$$.traducao = "int"; tipoDaDeclaracao = "int";}
 			| TK_TIPO_CHAR	{$$.traducao = "char"; tipoDaDeclaracao = "char";}
 			| TK_TIPO_FLOAT	{$$.traducao = "float"; tipoDaDeclaracao = "float";}
-			| TK_TIPO_STRING {$$.traducao = "string"; tipoDaDeclaracao = "string";}
+			| TK_TIPO_STRING {$$.traducao = "STRING"; tipoDaDeclaracao = "STRING";}
 //}
 %%
 

@@ -1,14 +1,14 @@
-
-
-global int a = 2 + 3, b = 3;
-
-global b = 2;
-int b = 1;
-
-
-print(global a, global b, b);
-{
-	int b = 3;
-	print(b);
+int func(){
+	1 + 1;
+	return 1 + 1;
+}
+int func(int a){
+	return a * 3;
 }
 
+int func(float a){
+	return (int)( a * 5);
+}
+
+
+print(func(4.0));

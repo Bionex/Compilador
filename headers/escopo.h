@@ -30,6 +30,7 @@ tabelaVariavel popEscopo(pilhaMapaPtr);
 pilhaMapaPtr createMapStack();
 caracteristicas createVar(string, string, string);
 void addVar2Escopo (pilhaMapaPtr, caracteristicas);
+void addVar2EscopoSuperior(pilhaMapaPtr, caracteristicas);
 void addVar2Global (pilhaMapaPtr, caracteristicas);
 
 #endif

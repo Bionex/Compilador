@@ -57,6 +57,10 @@ void addVar2Escopo (pilhaMapaPtr pilha, caracteristicas v){
 
 }
 
+void addVar2EscopoSuperior(pilhaMapaPtr pilha, caracteristicas v){
+    pilha->escopos[pilha->escopoAtual- 1][v.nomeVar] = v;
+}
+
 void addVar2Global (pilhaMapaPtr pilha, caracteristicas v){
     //cout<< "inserindo a variavel " + v.nomeVar + "como " + v.localVar << endl; 
 	pilha->escopos[0][v.nomeVar] = v;

@@ -81,6 +81,7 @@ ID {LETRA}({LETRA}|{NUM})*
 "all"       {return TK_ALL;}
 "do"		{return TK_DO;}
 "scan"      {return TK_SCAN;}
+"return"    {return TK_RETURN;}
 
 {NUM}		{yylval.traducao = yytext; return TK_NUM; }
 {REAL}		{yylval.traducao = yytext; return TK_REAL;}

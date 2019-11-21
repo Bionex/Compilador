@@ -53,6 +53,7 @@ struct atributos declaracaoVariavelGlobal(string, string);
 atributos declaracaoVariavelAtribuicaoGlobal(string, string, atributos);
 struct atributos operacaoRelacional(struct atributos, struct atributos, string);
 string gerarGotoLabel();
+string gerarFuncaoLabel();
 Loop gerarGotoDoLabel();
 Loop gerarGotoWhileLabel();
 Loop gerarGotoForLabel();
@@ -83,13 +84,20 @@ extern int nGotoWhile;
 extern int nGotoDo;
 extern int nGotoFor;
 extern int lineCount;
+extern int nFuncao;
 
 extern stack <SwitchLabels> gambiarraSwitch ;
 
 extern string tipoDaDeclaracao;
 
 extern string erros;
+extern string funcoes;
+extern string prototipos;
 extern bool temErro ;
+extern int numeroAtributos;
+extern vector<string> tipoAtributos;
+extern int numeroAtributosChamada;
+extern vector<string> tipoAtributosChamada;
 
 extern pilhaMapaPtr pilhaContexto;
 extern pilhaLoopPtr loops;
