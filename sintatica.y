@@ -100,7 +100,7 @@ COMANDO:	STATEMENT PTO_VIRGULA {$$.traducao = $1.traducao;}
 			| PTO_VIRGULA {$$.traducao = "";}
 			| BLOCO {$$.traducao = $1.traducao;}
 			| GLOBAL PTO_VIRGULA {$$.traducao = $1.traducao;}
-			| FUNCAO {$$.traducao = ""; funcoes +=  $1.traducao;}
+			| FUNCAO {$$.traducao = "";}
 			;
 
 STATEMENT: 	E {$$.traducao = $1.traducao;}
@@ -496,24 +496,32 @@ FUNCAO:		TIPO TK_ID BLOCO_AUX '(' ATRIBUTOS ')' '{' COMANDOS TK_RETURN E ';' '}'
 					f.nomeFuncao = $2.label;
 					f.nomeLocal = c.localVar;
 					f.tipoRetorno = $1.traducao;
-					inserirFuncao(f);
+					bool conseguiu = inserirFuncao(f);
 
-					prototipos += f.tipoRetorno + " "+ f.nomeLocal +"( ";
-					for(int i = 0; i < numeroAtributos; i++){
-						if(i == 0){
-							prototipos += tipoAtributos[i];
+					if(conseguiu){
+
+						prototipos += f.tipoRetorno + " "+ f.nomeLocal +"( ";
+						for(int i = 0; i < numeroAtributos; i++){
+							if(i == 0){
+								prototipos += tipoAtributos[i];
+							}
+							else
+								prototipos += ", " + tipoAtributos[i];
 						}
-						else
-							prototipos += ", " + tipoAtributos[i];
+						prototipos += " );\n";
+
+						numeroAtributos = 0;
+						tipoAtributos.clear();
+
+						addVar2EscopoSuperior(pilhaContexto, c);
+						$$.traducao = $1.traducao + " " + c.localVar + "( " + $5.traducao + ")\n";
+						$$.traducao += "{\n" + $8.traducao + $10.traducao +"\treturn " + $10.label+";\n" + "}\n";
+						
+						funcoes += $$.traducao;
 					}
-					prototipos += " );\n";
-
-					numeroAtributos = 0;
-					tipoAtributos.clear();
-
-					addVar2EscopoSuperior(pilhaContexto, c);
-					$$.traducao = $1.traducao + " " + c.localVar + "( " + $5.traducao + ")\n";
-					$$.traducao += "{\n" + $8.traducao + $10.traducao +"\treturn " + $10.label+";\n" + "}\n";
+					else{
+						yyerror("Não foi possivel fazer sobrecarga da funcao " + $1.traducao + " " + $2.label + "( " + $5.traducao + ")");
+					}
 				}
 				else
 					yyerror("Funcao espera retorno " + $1.traducao + " e o retorno dado foi " + $10.tipo);
