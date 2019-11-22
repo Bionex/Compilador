@@ -31,6 +31,8 @@ vector<string> tipoAtributosChamada;
 
 bool temErro = 0;
 
+string declaracoesNull;
+
 pilhaMapaPtr pilhaContexto = createMapStack();
 pilhaLoopPtr loops = createLoopStack();
 
@@ -110,7 +112,7 @@ string declararVars(){
 	for(auto &x: temporarias){
 		retorno = retorno + "" + x.second + " " +x.first + ";\n";
 		if(x.second == "STRING")
-			retorno += "" + x.first + " = NULL;\n";
+			declaracoesNull +=  x.first + " = NULL;\n";
 	}
 	return retorno;
 }

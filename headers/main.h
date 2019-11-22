@@ -94,6 +94,7 @@ extern string erros;
 extern string funcoes;
 extern string prototipos;
 extern bool temErro ;
+extern string declaracoesNull;
 extern int numeroAtributos;
 extern vector<string> tipoAtributos;
 extern int numeroAtributosChamada;

@@ -40,15 +40,18 @@ using namespace std;
 
 %start S
 
+
 %left TK_AND
 %left TK_OR
 %left TK_NOT
+%left COLCHETES
 %left '<' '>' TK_NOT_EQ TK_EQ TK_BIG_EQ TK_SMALL_EQ
 %left '%'
 %left '+' '-'
 %left '*' '/'
 %left '(' ')'
 %right UMINUS
+
 
 %nonassoc NO_ELSE
 %nonassoc TK_ELSE
@@ -65,7 +68,7 @@ S:			COMANDOS
 					cout << erros;
 				}
 				else
-					cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\n\n#define BOOL int\n#define True 1\n#define False 0\n#define STRING char*\n\nusing namespace std;\n\n"<< prototipos <<"\n"<< declararVars() << "\nint main(void)\n{\n" << "\n" <<$1.traducao << "\n\treturn 0;\n}"<< "\n\n" + funcoes << endl; 
+					cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\n\n#define BOOL int\n#define True 1\n#define False 0\n#define STRING char*\n\nusing namespace std;\n\n"<< prototipos <<"\n"<< declararVars() << "\nint main(void)\n{\n"<< declaracoesNull << "\n" <<$1.traducao << "\n\treturn 0;\n}"<< "\n\n" + funcoes << endl; 
 			}
 			;
 
@@ -739,19 +742,20 @@ E:			E '+' E
 				}
 			}
 
-			| TK_ID '[' E ']'
+			| E VETOR
 			{
-				caracteristicas variavel = buscarVariavel($1.label);
-				if(variavel.localVar == "")
-					yyerror("Variavel "+ $1.label + " usada antes de ser declarada");
-				else if(variavel.tipo == "STRING"){
+				
+				if($1.tipo == "STRING"){
 					string temporaria = gerarLabel();
 					inserirTemporaria(temporaria, "char");
 					//cout << temporaria << endl;
-					$$.traducao = $3.traducao;
-					$$.traducao += "\t" + temporaria + " = "+ variavel.localVar + "[" + $3.label + "];\n";
+					$$.traducao = $2.traducao;
+					$$.traducao += "\t" + temporaria + " = "+ $1.label + "[" + $2.label + "];\n";
 					$$.label = temporaria;
 					$$.tipo = "char";
+				}
+				else{
+					yyerror("O operador [] nao esta definido para " + $1.tipo);
 				}
 			}
 			//}
@@ -897,6 +901,13 @@ AUX_PARAMETROS:	E
 				tipoAtributosChamada.push_back($3.tipo);
 				$$.traducao = $1.traducao + $3.traducao;
 				$$.label = $1.label + ", " + $3.label;
+			}
+
+VETOR:		'[' E ']'
+			{
+				$$.traducao = $2.traducao;
+				$$.label = $2.label;
+				$$.tipo = $2.tipo;
 			}
 
 TIPO:		TK_TIPO_BOOL	{$$.traducao = "BOOL"; tipoDaDeclaracao = "BOOL";}
