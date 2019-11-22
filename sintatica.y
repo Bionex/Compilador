@@ -44,7 +44,7 @@ using namespace std;
 %left TK_AND
 %left TK_OR
 %left TK_NOT
-%left COLCHETES
+%left '[' ']'
 %left '<' '>' TK_NOT_EQ TK_EQ TK_BIG_EQ TK_SMALL_EQ
 %left '%'
 %left '+' '-'
@@ -749,7 +749,8 @@ E:			E '+' E
 					string temporaria = gerarLabel();
 					inserirTemporaria(temporaria, "char");
 					//cout << temporaria << endl;
-					$$.traducao = $2.traducao;
+					$$.traducao = $1.traducao;
+					$$.traducao += $2.traducao;
 					$$.traducao += "\t" + temporaria + " = "+ $1.label + "[" + $2.label + "];\n";
 					$$.label = temporaria;
 					$$.tipo = "char";
@@ -905,10 +906,16 @@ AUX_PARAMETROS:	E
 
 VETOR:		'[' E ']'
 			{
-				$$.traducao = $2.traducao;
-				$$.label = $2.label;
-				$$.tipo = $2.tipo;
+				if($2.tipo == "int"){
+					$$.traducao = $2.traducao;
+					$$.label = $2.label;
+					$$.tipo = $2.tipo;
+				}
+				else
+					yyerror("O indice precisa ser um inteiro");
+
 			}
+			;
 
 TIPO:		TK_TIPO_BOOL	{$$.traducao = "BOOL"; tipoDaDeclaracao = "BOOL";}
 			| TK_TIPO_INT	{$$.traducao = "int"; tipoDaDeclaracao = "int";}

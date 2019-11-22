@@ -112,7 +112,7 @@ string declararVars(){
 	for(auto &x: temporarias){
 		retorno = retorno + "" + x.second + " " +x.first + ";\n";
 		if(x.second == "STRING")
-			declaracoesNull +=  x.first + " = NULL;\n";
+			declaracoesNull +=  "\t" + x.first + " = NULL;\n";
 	}
 	return retorno;
 }
