@@ -73,6 +73,8 @@ atributos leituraString(caracteristicas);
 atributos codigoAtribuicao(atributos,atributos);
 atributos codigoAtribuicaoGlobal(atributos,atributos);
 atributos converterStringInteiro(atributos);
+atributos declaracaoMatriz(string, string,string);
+string alocarMatriz(string,string,string ,int);
 
 extern int nTemp;
 extern int nUser;
@@ -106,5 +108,7 @@ extern pilhaLoopPtr loops;
 extern std::unordered_map<std::string, string> temporarias;
 
 extern std::map<KeyTriple, struct coercao> tabelaCoercao;
+
+extern vector<atributos> labelsMatriz;
 
 #endif

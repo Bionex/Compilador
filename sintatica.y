@@ -18,7 +18,6 @@ using namespace std;
 
 
 
-
 // --------------------------------------------LEFTS E TOKENS -------------------------------
 
 
@@ -44,6 +43,7 @@ using namespace std;
 %left TK_AND
 %left TK_OR
 %left TK_NOT
+%precedence PREC_VETOR
 %left '[' ']'
 %left '<' '>' TK_NOT_EQ TK_EQ TK_BIG_EQ TK_SMALL_EQ
 %left '%'
@@ -457,6 +457,14 @@ ATRIBUICAO:	TK_ID '=' E
 			{
 				$$ = codigoAtribuicaoGlobal($2, $4);
 			}
+			| TK_ID VETOR '=' E %prec PREC_VETOR
+			{
+				caracteristicas variavel = buscarVariavel($1.label);
+				if(variavel.localVar != ""){
+					$$.traducao = $2.traducao + $4.traducao;
+					$$.traducao += "\t" + variavel.localVar + "[" +$2.label + "] = " + $4.label + ";\n";
+				}
+			}
 			;
 
 
@@ -472,6 +480,11 @@ DECLARACAO:	TIPO TK_ID DECLARACAO_AUX
 				//cout<< "label aq" + $4.label;
 				$$.traducao += $5.traducao;
 			}
+			| TIPO TK_ID MATRIZ DECLARACAO_AUX
+			{
+				$$ = declaracaoMatriz($2.label,$1.traducao ,$3.tipo);
+				$$.traducao += $4.traducao;
+			}
 			;
 
 DECLARACAO_AUX:',' TK_ID DECLARACAO_AUX 
@@ -485,7 +498,31 @@ DECLARACAO_AUX:',' TK_ID DECLARACAO_AUX
 				//cout<< "label aq" + $4.label;
 				$$.traducao += $5.traducao;
 			}
+			| ',' TK_ID MATRIZ DECLARACAO_AUX
+			{
+				$$ = declaracaoMatriz($2.label, tipoDaDeclaracao, $3.tipo);
+				$$.traducao += $4.traducao;
+				
+			}
 			| /*vazio */ {$$.traducao = "";}
+			;
+
+MATRIZ:		'[' E ']' MATRIZ
+			{
+				labelsMatriz.push_back($2);
+				if($2.tipo == "int"){
+					$$.tipo = "*" + $4.tipo;
+
+				}
+				else{
+					yyerror("O numero de posicoes a ser alocada precisa ser um inteiro");
+				}
+			}
+			| /* */{
+				$$.traducao = "";
+				$$.tipo = "";
+				$$.label = "";
+			}
 			;
 
 FUNCAO:		FUNCAO_AUX '{' COMANDOS '}'
@@ -754,6 +791,18 @@ E:			E '+' E
 					$$.traducao += "\t" + temporaria + " = "+ $1.label + "[" + $2.label + "];\n";
 					$$.label = temporaria;
 					$$.tipo = "char";
+				}
+				if($1.tipo[$1.tipo.size() - 1] == '*')
+				{
+					string tipo = $1.tipo.substr(0, $1.tipo.size()-1);
+					string temporaria = gerarLabel();
+					inserirTemporaria(temporaria,tipo);
+					//cout << temporaria << endl;
+					$$.traducao = $1.traducao;
+					$$.traducao += $2.traducao;
+					$$.traducao += "\t" + temporaria + " = "+ $1.label + "[" + $2.label + "];\n";
+					$$.label = temporaria;
+					$$.tipo = tipo;
 				}
 				else{
 					yyerror("O operador [] nao esta definido para " + $1.tipo);

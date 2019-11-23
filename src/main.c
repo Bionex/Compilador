@@ -40,6 +40,8 @@ std::unordered_map<std::string, string> temporarias;
 
 std::map<KeyTriple, struct coercao> tabelaCoercao;
 
+vector<atributos> labelsMatriz;
+
 void yyerror( string MSG )
 {
 	if(MSG == "syntax error"){
@@ -869,19 +871,65 @@ atributos converterStringInteiro(atributos variavel){
 	inserirTemporaria(comparacaoIf1, "BOOL");
 	$$.traducao += "\t" + comparacaoIf1 + " = " + comparacaoI + " && " + comparacaoMenos + ";\n"; 
 
-
-
-
-
-
-
-
-
-
 	return $$;
 
 	
 	
+}
+
+atributos declaracaoMatriz(string variavel, string tipo, string ponteiros){
+	int cont = 0;
+	atributos $$;
+	caracteristicas varCaracteristicas = buscarVariavelTopo(variavel);
+	if(varCaracteristicas.localVar == ""){
+		varCaracteristicas.tipo = tipo + ponteiros;
+		varCaracteristicas.localVar = labelUsuario();
+		varCaracteristicas.nomeVar = variavel;
+		addVar2Escopo(pilhaContexto,varCaracteristicas);
+		temporarias[varCaracteristicas.localVar] = varCaracteristicas.tipo;
+		ponteiros.erase(ponteiros.size() - 1);
+		for(int i = 0; i< labelsMatriz.size(); i++){
+			$$.traducao += labelsMatriz[i].traducao;
+		}
+		$$.traducao += "\t"+varCaracteristicas.localVar + " = (" + tipo + ponteiros + "*) malloc(sizeof(" + tipo + ponteiros + ") * " + labelsMatriz[cont].label + " );\n"; 
+		$$.tipo = varCaracteristicas.tipo;
+		$$.label = varCaracteristicas.localVar;
+		cont++;
+		string lastLabel = varCaracteristicas.localVar;
+		if(ponteiros[ponteiros.size() - 1] == '*'){
+			$$.traducao += alocarMatriz(lastLabel, tipo, ponteiros, cont);
+		}
+
+
+		return $$;
+	}
+
+}
+
+string alocarMatriz(string labelAnterior,string tipo,string ponteiros,int cont){
+	atributos $$;
+	string tmp = gerarLabel();
+	string tmpInt = gerarLabel();
+	string labelInicio = gerarGotoLabel();
+	string labelFim = gerarGotoLabel();
+	inserirTemporaria(tmp,tipo + ponteiros);
+	inserirTemporaria(tmpInt, "int");
+	$$.traducao += "\t" + tmpInt + " = 0;\n";
+	$$.traducao += "\t" + labelInicio + ":\n";
+	atributos auxComparacao, resultado;
+	auxComparacao.tipo = "int";
+	auxComparacao.label = tmpInt;
+	resultado = conversaoImplicita(auxComparacao, labelsMatriz[cont], "<");
+	$$.traducao += resultado.traducao + "\t" + resultado.label + " = !" + resultado.label + ";\n";
+	$$.traducao += "\tif(" + resultado.label + ") goto " + labelFim+ ";\n";
+	$$.traducao += "\t" + tmp + " = (" + tipo+ponteiros +") malloc(sizeof(" + tipo + ponteiros.substr(0, ponteiros.size() - 1) + ") * " + labelsMatriz[cont].label + ");\n"; 
+	$$.traducao += "\t" + labelAnterior +"[" + tmpInt +"]"  " = " + tmp + ";\n";
+	ponteiros.erase(ponteiros.size() - 1);
+	if(ponteiros[ponteiros.size() - 1] == '*')
+	$$.traducao += alocarMatriz(tmp,tipo, ponteiros, cont++);
+	$$.traducao += "\t" + tmpInt + " = " + tmpInt + "+ 1;\n";
+	$$.traducao += "\t" + labelFim + ":;\n";
+	return $$.traducao;
 }
 
 
