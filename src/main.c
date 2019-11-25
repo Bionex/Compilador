@@ -42,6 +42,8 @@ std::map<KeyTriple, struct coercao> tabelaCoercao;
 
 vector<atributos> labelsMatriz;
 
+vector<gambiarraAtribuicao> gambiarra;
+
 void yyerror( string MSG )
 {
 	if(MSG == "syntax error"){
@@ -448,7 +450,7 @@ atributos declaracaoVariavelAtribuicao(string var, string tipo, atributos expres
 			varCaracteristicas.nomeVar = var;
 			addVar2Escopo(pilhaContexto,varCaracteristicas);
 			temporarias[varCaracteristicas.localVar] = tipo;
-			atributos auxiliarVariavel = {var, "" , tipo};
+			atributos auxiliarVariavel = {varCaracteristicas.localVar, "" , tipo};
 			atributos attr = codigoAtribuicao(auxiliarVariavel,expressao);
 			$$.traducao += attr.traducao; 
 		}
@@ -735,24 +737,24 @@ atributos leituraString(caracteristicas variavel){
 atributos codigoAtribuicao(atributos $1, atributos $3){
 	//cout << " 1.t = " + $1.tipo << " 1.l = " + $1.label << " 3.t = " + $3.tipo <<" 3.l = " + $3.label << "fim impressao";
 	atributos $$;
-	caracteristicas variavel = buscarVariavel($1.label);
-	if(variavel.tipo != "STRING"){
-		if(variavel.tipo == $3.tipo){
-			$$.traducao = $3.traducao +  "\t" + variavel.localVar + " = " + $3.label + ";\n";
+	
+	if($1.tipo != "STRING"){
+		if($1.tipo == $3.tipo){
+			$$.traducao =$1.traducao + $3.traducao +  "\t" + $1.label + " = " + $3.label + ";\n";
 		}
 		else
 		{
-			struct coercao correcao = verificarCoercao(variavel.tipo, "=", $3.tipo);
+			struct coercao correcao = verificarCoercao($1.tipo, "=", $3.tipo);
 			if(correcao.retornoTipo != "NULL")
 			{
 				
-				if(variavel.tipo == $3.tipo)
+				if($1.tipo == correcao.conversaoTipo)
 				{
-					$$.traducao = $3.traducao +  "\t" + variavel.localVar + " = " + "(" + correcao.conversaoTipo + ")" + $3.label + ";\n";
+					$$.traducao = $1.traducao + $3.traducao +  "\t" + $1.label + " = " + "(" + correcao.conversaoTipo + ")" + $3.label + ";\n";
 				}
 				else
 				{
-					yyerror("a operacao = nao esta definida para " + variavel.tipo + " e " + $3.tipo);
+					yyerror("a operacao = nao esta definida para " + $1.tipo + " e " + $3.tipo);
 				}
 
 			}
@@ -760,16 +762,16 @@ atributos codigoAtribuicao(atributos $1, atributos $3){
 	}
 	else
 	{
-		if(variavel.tipo != $3.tipo){
+		if($1.tipo != $3.tipo){
 			yyerror("Atribuicao nao esta definida para string e " + $3.tipo);
 		}
 		else{
-			string tamanhoSource = gerarLabelStringSize($3.label), tamanhoDestino = gerarLabelStringSize(variavel.localVar);
+			string tamanhoSource = gerarLabelStringSize($3.label), tamanhoDestino = gerarLabelStringSize($1.label);
 			inserirTemporaria(tamanhoDestino, "int");
 			$$.traducao += $3.traducao;
 			$$.traducao += "\t" + tamanhoDestino + " = " + tamanhoSource + ";\n";
-			$$.traducao += "\t" + variavel.localVar + " = (STRING) realloc( "+ variavel.localVar + ", " + tamanhoDestino + ");\n";
-			$$.traducao += "\tstrcpy( "+ variavel.localVar  + ", " + $3.label + " );\n";
+			$$.traducao += "\t" + $1.label + " = (STRING) realloc( "+ $1.label + ", " + tamanhoDestino + ");\n";
+			$$.traducao += "\tstrcpy( "+ $1.label  + ", " + $3.label + " );\n";
 		}
 	}
 	return $$;
@@ -928,9 +930,56 @@ string alocarMatriz(string labelAnterior,string tipo,string ponteiros,int cont){
 	if(ponteiros[ponteiros.size() - 1] == '*')
 	$$.traducao += alocarMatriz(tmp,tipo, ponteiros, cont++);
 	$$.traducao += "\t" + tmpInt + " = " + tmpInt + "+ 1;\n";
+	$$.traducao += "\t goto " + labelInicio + ";\n"; 
 	$$.traducao += "\t" + labelFim + ":;\n";
 	return $$.traducao;
 }
 
+atributos codigoAtribuicaoComposta(atributos $1, atributos $3 , string operador){
+	//cout << " 1.t = " + $1.tipo << " 1.l = " + $1.label << " 3.t = " + $3.tipo <<" 3.l = " + $3.label << "fim impressao";
+	atributos $$;
+	cout<< "tipo do E "<< $3.tipo<< endl; 
+	caracteristicas variavel = buscarVariavel($1.label);
+	if(variavel.tipo != "STRING"){
+		atributos aux;
+		aux.tipo = variavel.tipo;
+		aux.label = variavel.localVar;
+		atributos retorno = conversaoImplicita(aux,$3, operador);
+		if(variavel.tipo == $3.tipo){
+			$$.traducao = retorno.traducao + "\t" + variavel.localVar + " = " + retorno.label + ";\n";
+		}
+		else
+		{
+			struct coercao correcao = verificarCoercao(variavel.tipo, "=", $3.tipo);
+			if(correcao.retornoTipo != "NULL")
+			{
+				
+				if(variavel.tipo == correcao.conversaoTipo)
+				{
+					$$.traducao = retorno.traducao +  "\t" + variavel.localVar + " = " + "(" + correcao.conversaoTipo + ")" + retorno.label + ";\n";
+				}
+				else
+				{
+					yyerror("a operacao = nao esta definida para " + variavel.tipo + " e " + $3.tipo);
+				}
 
+			}
+		}
+	}
+	else
+	{
+		if(variavel.tipo != $3.tipo){
+			yyerror("Atribuicao nao esta definida para string e " + $3.tipo);
+		}
+		else{
+			string tamanhoSource = gerarLabelStringSize($3.label), tamanhoDestino = gerarLabelStringSize(variavel.localVar);
+			inserirTemporaria(tamanhoDestino, "int");
+			$$.traducao += $3.traducao;
+			$$.traducao += "\t" + tamanhoDestino + " = " + tamanhoSource + ";\n";
+			$$.traducao += "\t" + variavel.localVar + " = (STRING) realloc( "+ variavel.localVar + ", " + tamanhoDestino + ");\n";
+			$$.traducao += "\tstrcpy( "+ variavel.localVar  + ", " + $3.label + " );\n";
+		}
+	}
+	return $$;
+}
 

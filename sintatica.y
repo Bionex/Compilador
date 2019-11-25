@@ -18,6 +18,7 @@ using namespace std;
 
 
 
+
 // --------------------------------------------LEFTS E TOKENS -------------------------------
 
 
@@ -102,7 +103,7 @@ COMANDO:	STATEMENT PTO_VIRGULA {$$.traducao = $1.traducao;}
 			| CONTINUE PTO_VIRGULA{ $$.traducao = $1.traducao;}
 			| PTO_VIRGULA {$$.traducao = "";}
 			| BLOCO {$$.traducao = $1.traducao;}
-			| GLOBAL PTO_VIRGULA {$$.traducao = $1.traducao;}
+			//| GLOBAL PTO_VIRGULA {$$.traducao = $1.traducao;}
 			| FUNCAO {$$.traducao = "";}
 			| RETURN PTO_VIRGULA{$$.traducao = $1.traducao;}
 			;
@@ -193,9 +194,23 @@ CONTINUE: 	TK_CONTINUE
 			}
 			;
 
-LOOP: 		DO PTO_VIRGULA {$$.traducao = $1.traducao; popEscopo(pilhaContexto);}
-			| WHILE { $$.traducao = $1.traducao; popEscopo(pilhaContexto);}
-			| FOR {$$.traducao = $1.traducao; popEscopo(pilhaContexto);}
+LOOP: 		DO PTO_VIRGULA 
+			{
+				$$.traducao = $1.traducao; 
+				popEscopo(pilhaContexto);
+				popLoop(loops);
+			}
+			| WHILE 
+			{ 
+				$$.traducao = $1.traducao; 
+				popEscopo(pilhaContexto); 
+				popLoop(loops);}
+			| FOR 
+			{
+				$$.traducao = $1.traducao; 
+				popEscopo(pilhaContexto); 
+				popLoop(loops);
+			}
 			;
 
 LOOP_AUX:	TK_DO 
@@ -449,25 +464,68 @@ SCAN_ARGS:	TIPO ':' TK_ID ',' SCAN_ARGS
 			}
 			;
 
-ATRIBUICAO:	TK_ID '=' E 
+ATRIBUICAO:	ATR_AUX '=' E 
 			{
-				$$ = codigoAtribuicao($1, $3);
-			}
-			| TK_GLOBAL TK_ID '=' E 
-			{
-				$$ = codigoAtribuicaoGlobal($2, $4);
-			}
-			| TK_ID VETOR '=' E %prec PREC_VETOR
-			{
-				caracteristicas variavel = buscarVariavel($1.label);
-				if(variavel.localVar != ""){
-					$$.traducao = $2.traducao + $4.traducao;
-					$$.traducao += "\t" + variavel.localVar + "[" +$2.label + "] = " + $4.label + ";\n";
+				$$.traducao = $1.traducao;
+				for(int i = 1; i < gambiarra.size(); i++){
+					$$.traducao += "\t" + gambiarra[i].label + " = " + gambiarra[i].atr + ";\n";
 				}
+				atributos aux;
+				aux.tipo = $1.tipo;
+				aux.label = gambiarra[gambiarra.size() - 1].atr;
+
+				aux = codigoAtribuicao(aux, $3);
+				$$.traducao += aux.traducao;
+				gambiarra.clear();
+			}
+			| ATR_AUX '+' '=' E
+			{
+				$$ = codigoAtribuicaoComposta($1, $4 , "+");
+			}
+			| ATR_AUX '-' '=' E
+			{
+				$$ = codigoAtribuicaoComposta($1, $4 , "-");
+			}
+			| ATR_AUX '*' '=' E
+			{
+				$$ = codigoAtribuicaoComposta($1, $4 , "*");
+			}
+			| ATR_AUX '/' '=' E
+			{
+				$$ = codigoAtribuicaoComposta($1, $4 , "/");
 			}
 			;
 
+ATR_AUX: 	ATR_AUX '[' E ']'  
+			{
+				if($1.tipo[$1.tipo.size() - 1] == '*' || $1.tipo == "STRING")
+				{
+					string tmp = gerarLabel();
+					$$.tipo = $1.tipo.substr(0, $1.tipo.size() - 1);
+					inserirTemporaria(tmp, $$.tipo);
+					gambiarraAtribuicao a;
+					$$.label = tmp;
+					a.label = tmp;
+					$$.traducao = $1.traducao + $3.traducao;
+					a.atr = $1.label + "[" + $3.label +"]";
+					gambiarra.push_back(a);
+					
 
+				}
+				else{
+					yyerror("O operador [] nao esta definido para o tipo " + $1.tipo);
+				}
+			}
+			| TK_ID 
+			{
+				caracteristicas c = buscarVariavel($1.label);
+				$$.label = c.localVar;
+				$$.traducao = "";
+				$$.tipo = c.tipo;
+				gambiarraAtribuicao a;
+				a.atr = c.localVar;
+				gambiarra.push_back(a);
+			}
 
 DECLARACAO:	TIPO TK_ID DECLARACAO_AUX
 			{
@@ -666,7 +724,7 @@ AUX_ATRIBUTOS: AUX_ATRIBUTOS ',' TIPO TK_ID
 			}
 			;
 
-GLOBAL: 	TK_GLOBAL TIPO TK_ID GLOBAL_AUX 
+/*GLOBAL: 	TK_GLOBAL TIPO TK_ID GLOBAL_AUX 
 			{
 				//cout<< "AAAAAAAAAAAAAAAAAAA" << endl;
 				$$ = declaracaoVariavelGlobal($3.label,tipoDaDeclaracao);
@@ -687,9 +745,9 @@ GLOBAL_AUX:	',' TK_ID GLOBAL_AUX
 			{
 				$$ = declaracaoVariavelAtribuicaoGlobal($2.label, tipoDaDeclaracao, $4);
 			}
-			| /* vazio */{$$.traducao = "";}
+			| /* vazio *//*{$$.traducao = "";}
 			;
-
+*/
 
 //        ----------------	ARITMETICA -----------------------
 E:			E '+' E

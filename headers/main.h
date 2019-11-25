@@ -33,6 +33,11 @@ struct coercao{
 	string retornoTipo, conversaoTipo;
 };
 
+typedef struct gambiarra{
+	string label;
+	string atr;
+} gambiarraAtribuicao;
+
 
 
 typedef std::tuple<string, string, string> KeyTriple;
@@ -75,6 +80,7 @@ atributos codigoAtribuicaoGlobal(atributos,atributos);
 atributos converterStringInteiro(atributos);
 atributos declaracaoMatriz(string, string,string);
 string alocarMatriz(string,string,string ,int);
+atributos codigoAtribuicaoComposta(atributos,atributos,string);
 
 extern int nTemp;
 extern int nUser;
@@ -110,5 +116,8 @@ extern std::unordered_map<std::string, string> temporarias;
 extern std::map<KeyTriple, struct coercao> tabelaCoercao;
 
 extern vector<atributos> labelsMatriz;
+
+extern vector<gambiarraAtribuicao> gambiarra;
+
 
 #endif
