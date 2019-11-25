@@ -640,13 +640,22 @@ FUNCAO_AUX:	TIPO TK_ID BLOCO_AUX '(' ATRIBUTOS ')'
 
 RETURN:		TK_RETURN E
 			{
-				$$.traducao = $2.traducao + "\treturn " + $2.label+ ";\n";
+				$$.traducao = $2.traducao;
 				$$.tipo = $2.tipo;
 				string tipoFuncao = getTopFunction();
-				if($2.tipo != tipoFuncao){
-					//verifica se eh possivel fazer coercao se não for erro
-
-					yyerror("A funcao espera retorno " + tipoFuncao + " e nao eh possivel fazer a conversao de " + $2.tipo  + " para " + tipoFuncao);
+				if(tipoFuncao != ""){
+					if($2.tipo != tipoFuncao){
+						struct coercao correcao = verificarCoercao(tipoFuncao, "=", $2.tipo);
+						if(correcao.conversaoTipo != "NULL"){
+							$$.traducao += + "\treturn ("+correcao.conversaoTipo + ") " + $2.label+ ";\n";
+						}
+						else{
+							yyerror("A funcao espera retorno " + tipoFuncao + " e nao eh possivel fazer a conversao de " + $2.tipo  + " para " + tipoFuncao);
+						}
+					}
+				}
+				else{
+					yyerror("Return fora de uma funcao");
 				}
 			}
 

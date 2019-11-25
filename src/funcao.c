@@ -44,7 +44,10 @@ void popFunction(){
 }
 
 string getTopFunction(){
-    return pilhaFuncoes.top();
+    if(!pilhaFuncoes.empty())
+        return pilhaFuncoes.top();
+    else
+        return "";
 }
 
 
