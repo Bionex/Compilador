@@ -394,6 +394,9 @@ struct atributos conversaoImplicita(struct atributos $1, struct atributos $3 , s
 struct atributos declaracaoVariavel(string var, string tipo){
 	struct atributos $$;
 	$$.traducao = "";
+	if(tipo == "auto"){
+		yyerror("Para usar inferencia de tipo vc precisa inicializar a variavel e a variavel " + var + " nao foi inicializada");
+	}
 
 	caracteristicas varCaracteristicas = buscarVariavelTopo(var);
 	
@@ -436,6 +439,10 @@ atributos declaracaoVariavelAtribuicao(string var, string tipo, atributos expres
 	atributos $$;
 	$$.traducao = "";
 
+	if(tipo == "auto"){
+		tipo = expressao.tipo;
+	}
+
 	caracteristicas varCaracteristicas = buscarVariavelTopo(var);
 	
 	if(varCaracteristicas.localVar == "")
@@ -454,7 +461,6 @@ atributos declaracaoVariavelAtribuicao(string var, string tipo, atributos expres
 			atributos attr = codigoAtribuicao(auxiliarVariavel,expressao);
 			$$.traducao += attr.traducao; 
 		}
-
 	}
 	else
 	{

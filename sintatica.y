@@ -27,7 +27,7 @@ using namespace std;
 %token TK_NUM TK_REAL TK_CHAR
 %token TK_MAIN TK_ID
 %token TK_FIM TK_ERROR
-%token TK_TIPO_FLOAT TK_TIPO_INT TK_TIPO_CHAR TK_TIPO_BOOL TK_TIPO_STRING
+%token TK_TIPO_FLOAT TK_TIPO_INT TK_TIPO_CHAR TK_TIPO_BOOL TK_TIPO_STRING TK_AUTO
 %token TK_EQ TK_NOT_EQ TK_BIG_EQ TK_SMALL_EQ
 %token TK_AND TK_OR TK_NOT
 %token TK_LOGICO TK_STRING
@@ -239,13 +239,15 @@ LOOP_AUX:	TK_DO
 FOR: 		'(' FOR_ARG1 ';' FOR_ARG2 ';' FOR_ARG3 ')' BLOMANDO
 			{
 				Loop loopinho = getLoop(loops);
-				$$.traducao = $2.traducao + "\t" +loopinho.startLabel+ ":\n" +$4.traducao;
+				$$.traducao = "\t//INICIO FOR\n";
+				$$.traducao += $2.traducao + "\t" +loopinho.startLabel+ ":\n" +$4.traducao;
 				$$.traducao += "\t" + $4.label + " = !" + $4.label + ";\n";
 				$$.traducao += "\tif( " + $4.label + ") goto " + loopinho.endLabel + ";\n";
 				$$.traducao += $8.traducao + "\t" + loopinho.continueLabel + ":\n";
 				$$.traducao += $6.traducao;
 				$$.traducao += "\tgoto " + loopinho.startLabel + ";\n";
 				$$.traducao += "\t" + loopinho.endLabel + ":\n";
+				$$.traducao += "\t//FIM FOR\n";
 			}
 			;
 
@@ -296,21 +298,20 @@ DO:			BLOMANDO TK_WHILE '(' E ')'
 			{
 				Loop loopinho = getLoop(loops);
 
-				$$.traducao = "\t" + loopinho.startLabel + ":\n" + $1.traducao;
+				$$.traducao += "\t//COMECANDO DO\n\t" + loopinho.startLabel + ":\n" + $1.traducao;
 				$$.traducao += "\t" + loopinho.continueLabel + ":\n";
 				$$.traducao += $4.traducao;
 				$$.traducao += "\t" + $4.label + " = !" + $4.label + ";\n";
 				$$.traducao += "\tif( " + $4.label + " ) goto " + loopinho.endLabel + ";\n";
 				$$.traducao += "\tgoto " + loopinho.startLabel + ";\n";
 				$$.traducao += "\t" + loopinho.endLabel + ":\n";
-
-				popLoop(loops);
+				$$.traducao += "\t//FIM DO\n";
 
 			}
 
 SWITCH:		TK_SWITCH '(' SWITCH_AUX ')' '{' caseRecursao TK_DEFAULT':' COMANDOS '}'
 			{
-					$$.traducao = $6.traducao + $9.traducao + "\t" + gambiarraSwitch.top().endLabel + ":\n";
+					$$.traducao = "\t\\\\COMECANDO SWITCH\n" + $6.traducao + $9.traducao + "\t" + gambiarraSwitch.top().endLabel + ":\n" + "\t\\\\FIM SWITCH\n";
 					//nGoto -= 1;
 					gambiarraSwitch.pop();
 					nGotoCase = 0;
@@ -395,8 +396,9 @@ WHILE:		E ')' BLOMANDO // removido o abre parenteses dessa regra devido a confli
 			// parenteses movido para a contra-parte em LOOP_AUX;
 			{
 				Loop loopinho = getLoop(loops);
-				$$.traducao = "\t"+ loopinho.startLabel + ":\n" +$1.traducao + "\t" + $1.label + " = !" + $1.label + ";\n" + "\tif( " + $1.label + " ) goto " + loopinho.endLabel + ";\n" + $3.traducao + "\tgoto "+ loopinho.startLabel + ";\n\t" + loopinho.endLabel + ":\n";
-				popLoop(loops);
+				$$.traducao = "\t//COMECANDO WHILE\n";
+				$$.traducao += "\t"+ loopinho.startLabel + ":\n" +$1.traducao + "\t" + $1.label + " = !" + $1.label + ";\n" + "\tif( " + $1.label + " ) goto " + loopinho.endLabel + ";\n" + $3.traducao + "\tgoto "+ loopinho.startLabel + ";\n\t" + loopinho.endLabel + ":\n";
+				$$.traducao += "\t//FIM WHILE\n";
 				//cout<< "teste2" << endl; 
 			}
 			;
@@ -529,7 +531,12 @@ ATR_AUX: 	ATR_AUX '[' E ']'
 
 DECLARACAO:	TIPO TK_ID DECLARACAO_AUX
 			{
-				$$ = declaracaoVariavel($2.label, $1.traducao);
+				$$ = declaracaoVariavel($2.label, tipoDaDeclaracao);
+				$$.traducao += $3.traducao;
+			}
+			|AUTO TK_ID DECLARACAO_AUX
+			{
+				$$ = declaracaoVariavel($2.label, tipoDaDeclaracao);
 				$$.traducao += $3.traducao;
 			}
 			| TIPO TK_ID '=' E DECLARACAO_AUX
@@ -543,7 +550,19 @@ DECLARACAO:	TIPO TK_ID DECLARACAO_AUX
 				$$ = declaracaoMatriz($2.label,$1.traducao ,$3.tipo);
 				$$.traducao += $4.traducao;
 			}
+			| /*TIPO TK_ID MATRIZ '=' ALGUMACOISA DECLARACAO_AUX
+			{
+				$$ = declaracaoMatriz($2.label,$1.traducao ,$3.tipo);
+				$$.traducao += $6.traducao;
+			}
+			|*/ AUTO TK_ID '=' E DECLARACAO_AUX
+			{
+				$$ = declaracaoVariavelAtribuicao($2.label, tipoDaDeclaracao, $4);
+				$$.traducao += $5.traducao;
+			}
 			;
+
+AUTO: TK_AUTO{$$.traducao = "";tipoDaDeclaracao = "auto";}
 
 DECLARACAO_AUX:',' TK_ID DECLARACAO_AUX 
 			{

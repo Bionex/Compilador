@@ -44,7 +44,8 @@ ID {LETRA}({LETRA}|{NUM})*
 "float"		{return TK_TIPO_FLOAT;}
 "char"		{return TK_TIPO_CHAR;}
 "bool"		{return TK_TIPO_BOOL;}
-"string"    {return TK_TIPO_STRING;}
+"string"  {return TK_TIPO_STRING;}
+"auto"    {return TK_AUTO;}
 
 
 
