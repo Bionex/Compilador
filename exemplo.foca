@@ -1,4 +1,2 @@
-
-auto x = 2.0, b = 3,c;
-
-print (c);
+string a;
+scan(string:a);

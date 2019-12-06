@@ -15,7 +15,6 @@
 #define YYSTYPE atributos
 
 using namespace std;
- trdtrdtrd
 
 
 
@@ -667,11 +666,14 @@ RETURN:		TK_RETURN E
 					if($2.tipo != tipoFuncao){
 						struct coercao correcao = verificarCoercao(tipoFuncao, "=", $2.tipo);
 						if(correcao.conversaoTipo != "NULL"){
-							$$.traducao += + "\treturn ("+correcao.conversaoTipo + ") " + $2.label+ ";\n";
+							$$.traducao += "\treturn ("+correcao.conversaoTipo + ") " + $2.label+ ";\n";
 						}
 						else{
 							yyerror("A funcao espera retorno " + tipoFuncao + " e nao eh possivel fazer a conversao de " + $2.tipo  + " para " + tipoFuncao);
 						}
+					}
+					else{
+						$$.traducao += "\treturn " + $2.label + ";\n";
 					}
 				}
 				else{
@@ -1067,7 +1069,8 @@ int yyparse();
 
 int main( int argc, char* argv[] )
 {
-	yydebug = 1;
+	//yydebug = 1;
+	yy_flex_debug = 1;
 
 	inicializarTabelaCoercao();
 
