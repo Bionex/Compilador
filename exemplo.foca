@@ -1,2 +1,9 @@
-string a;
-scan(string:a);
+int func(int a){
+	return 2;
+}
+
+
+int vetor[2];
+int vetor2[3];
+
+1 + 1;

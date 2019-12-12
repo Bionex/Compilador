@@ -908,7 +908,7 @@ atributos declaracaoMatriz(string variavel, string tipo, string ponteiros){
 			$$.traducao += alocarMatriz(lastLabel, tipo, ponteiros, cont);
 		}
 
-
+		labelsMatriz.clear();
 		return $$;
 	}
 
